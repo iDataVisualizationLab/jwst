@@ -1,0 +1,12 @@
+:root {
+  --navbar-height: 64px;
+  --text-color: #333;
+  --hover-color: #666;
+  --primary-color: #000;
+  --primary-hover-color: #444;
+  --bg-white: #fff;
+  --spacing-xl: 24px;
+  --container-width: 1200px;
+  --transition-fast: 0.2s ease;
+  --menu-font-family: 'Inter', sans-serif;
+}
