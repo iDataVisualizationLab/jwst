@@ -436,7 +436,7 @@ export default function LightCurvePlot() {
     }[] = [];
 
     figure.data.forEach(trace => {
-      if (trace?.legendgroup != type) return;
+      // if (trace?.legendgroup != type) return;
       if (!Array.isArray(trace.customdata)) return;
       // if (trace.customdata.type.toLowerCase() !== type.toLowerCase()) return;
 
