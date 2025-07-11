@@ -15,7 +15,7 @@ export default function Controller() {
 
     const dataTypeOptions = [
         { value: 'average', label: 'Average' },
-        { value: 'average-img', label: 'Average Image' },
+        // { value: 'average-img', label: 'Average Image' },
         { value: 'raw', label: 'Raw' },
     ];
 

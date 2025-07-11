@@ -25,6 +25,9 @@ type PlotSettings = {
   annotations: Partial<Plotly.Annotations>[];
   focusedAnnotationIndex: number;
   annotationIndex: number;
+
+  avgPointRawMap: Record<string, { x: number; y: number; err: number; customdata: unknown;}[]>;
+
   setSettings: (updates: Partial<PlotSettings>) => void;
 };
 
@@ -42,8 +45,8 @@ const defaultValue: PlotSettings = {
   lineWidth: 2,
   legendFontSize: 12,
   labelFontSize: 14,
-  tooltipFontSize: 12,
-  thumbnailsSize: 80,
+  tooltipFontSize: 16,
+  thumbnailsSize: 200,
 
   figure: { data: [], layout: {} as PlotLayout },
   rawFigure: { tracesSW: [], tracesLW: [] },
@@ -51,6 +54,8 @@ const defaultValue: PlotSettings = {
   annotations: [],
   focusedAnnotationIndex: -1,
   annotationIndex: 0,
+
+  avgPointRawMap: {},
 
   setSettings: () => { },
 };

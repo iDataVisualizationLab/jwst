@@ -2,6 +2,8 @@ export type PlotTrace = {
   x: number[];
   y: number[];
   err?: number[];
+  type?: string;
+  mode?: string;
   customdata?: unknown[];
   hoverinfo?: (
     | "y" | "x" | "text" | "z" | "name"
@@ -25,6 +27,8 @@ export type PlotTrace = {
   line?: Record<string, unknown>;
   xaxis?: string;
   yaxis?: string;
+
+  textposition?: string;
 };
 
 export interface PlotLayout {

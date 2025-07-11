@@ -80,6 +80,17 @@ export function getModalDetails(items: ModalDetails[]): React.ReactNode[] {
 
 export interface ModalInfo {
   imgSrc?: string;
-  summary?: string[]; // shared phase/type/mjd/time
-  details?: React.ReactNode[]; // array of per-trace strings or JSX
+  summary?: string[];
+  details?: {
+    label: string;
+    phase?: number;
+    mjd?: number;
+    filename?: string;
+    rows?: Array<{
+      epoch: string;
+      r_in: string;
+      r_out: string;
+      y: number;
+    }>;
+  };
 }
