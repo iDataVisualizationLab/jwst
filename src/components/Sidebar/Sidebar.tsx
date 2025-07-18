@@ -162,6 +162,7 @@ export default function Sidebar() {
           {/* Download Button */}
           <div>
             <button
+              disabled={true}
               className="w-full mt-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
               onClick={() => alert('Download logic goes here')}
             >
