@@ -10,7 +10,7 @@ import { xKeyMap } from '@/utils/xKeyMap';
 import { createAnnotation, ModalInfo } from '@/utils/annotationUtils';
 import { RenderTooltip } from '@/constants/hoverUtils';
 import { digitize, weightedAvg } from '@/libs/mathUtils';
-import { PlotTrace, PlotLayout, AveragePointCustomData } from '@/types/PlotTypes';
+import { PlotTrace, PlotDatumWithBBox, PlotLayout, AveragePointCustomData } from '@/types/PlotTypes';
 import { ImageModal } from '@/components/ImageModal';
 import RawDataPlotPanel from '@/components/RawDataPlotPanel';
 import { Trash2 } from 'lucide-react';
@@ -485,7 +485,7 @@ export default function LightCurvePlot() {
 
   function handleAveragePointClick(
     figure: { data: PlotTrace[] },
-    pt: Plotly.PlotDatum
+    pt: PlotDatumWithBBox
   ): void {
     const cd: AveragePointCustomData = (pt.customdata as unknown as AveragePointCustomData) ?? {};
     if (pt.bbox) {

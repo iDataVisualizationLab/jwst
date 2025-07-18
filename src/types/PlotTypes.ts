@@ -60,3 +60,13 @@ export  interface AveragePointCustomData {
     avgErr?: number;
     [key: string]: unknown;
   }
+
+export interface PlotDatumWithBBox extends Plotly.PlotDatum {
+  bbox?: {
+    x0: number;
+    x1: number;
+    y0: number;
+    y1: number;
+  };
+  fullData?: PlotTrace;
+}
