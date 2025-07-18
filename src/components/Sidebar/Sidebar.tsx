@@ -17,7 +17,7 @@ export default function Sidebar() {
   useEffect(() => {
     async function loadDataList() {
       try {
-        const res = await fetch('/data/json/ZTF_J1539/dataList.json');
+        const res = await fetch(`${process.env.BASE_PATH}/data/json/ZTF_J1539/dataList.json`);
         const docs = await res.json();
         setDataList(docs.map((d: string) => ({ label: d, value: d })));
       } catch (err) {

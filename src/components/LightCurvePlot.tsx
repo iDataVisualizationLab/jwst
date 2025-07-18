@@ -87,7 +87,7 @@ export default function LightCurvePlot() {
 
       for (const sel of dataSelection) {
         const [epoch, r1, r2] = sel.split('_');
-        const makePath = (wave: 'sw' | 'lw') => `/data/json/ZTF_J1539/rawdata/${epoch}/${wave}/${r1}/${r2}.json`;
+        const makePath = (wave: 'sw' | 'lw') => `${process.env.BASE_PATH}/data/json/ZTF_J1539/rawdata/${epoch}/${wave}/${r1}/${r2}.json`;
 
         try {
           const [swJson, lwJson] = await Promise.all([
