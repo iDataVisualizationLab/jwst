@@ -1,21 +1,24 @@
 import React from 'react';
 
-interface Trace {
-  xaxis: string;
-  yaxis: string;
-}
+import { PlotTrace } from '@/types/PlotTypes';
 
 interface AnnotationPoint {
-  x: number;
+  x: string | number | Date;
   y: number;
-  data: Trace;
+  data: PlotTrace;
 }
 
 export interface AnnotationDetails {
-  type: string;
-  phase: string | number;
-  [key: string]: any;
+  type?: string;
+  phase?: string | number;
+  [key: string]: unknown;
   text?: string;
+  font?: {
+    color?: string;
+    size?: number;
+    family?: string;
+  };
+  bgcolor?: string;
 }
 
 export function createAnnotation(pt: AnnotationPoint, cd: AnnotationDetails) {

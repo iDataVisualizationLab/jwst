@@ -1,7 +1,8 @@
 export type PlotTrace = {
-  x: number[];
+  x: number[] | string[] | Date[];
   y: number[];
   err?: number[];
+  error_y?: { type: 'data'; array: number[] };
   type?: string;
   mode?: string;
   customdata?: unknown[];
@@ -16,6 +17,7 @@ export type PlotTrace = {
     | "z+name" | "z+text"
   ) | undefined;
   hovertemplate?: string;
+  visible?: boolean | 'legendonly';
   plotType?: 'lines' | 'markers' | 'lines+markers';
   errorBars?: 'bar' | 'hide' | 'separate';
   name?: string;
@@ -27,7 +29,10 @@ export type PlotTrace = {
   line?: Record<string, unknown>;
   xaxis?: string;
   yaxis?: string;
-
+  opacity?: number;
+  legendgroup?: string;
+  legendgrouptitle?: { text: string };
+  text?: string;
   textposition?: string;
 };
 
@@ -44,3 +49,14 @@ export type PlotPoints = {
   data: PlotTrace;
   cd: unknown;
 }[];
+
+
+export  interface AveragePointCustomData {
+    type?: string;
+    epoch?: string;
+    r_in?: string;
+    r_out?: string;
+    phase?: string | number;
+    avgErr?: number;
+    [key: string]: unknown;
+  }

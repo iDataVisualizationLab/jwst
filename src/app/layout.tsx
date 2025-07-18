@@ -2,8 +2,7 @@
 import './globals.css';
 import { ReactNode } from 'react';
 import Navbar from '@/components/Navbar/Navbar';
-// import Controller from '@/components/Controller';
-import SidebarLayout from '@/components/Sidebar/SidebarLayout';
+import Sidebar from '@/components/Sidebar/Sidebar';
 import { PlotSettingsProvider } from '@/context/PlotSettingsContext';
 export const metadata = {
   title: 'JWST Precision Timing',
@@ -18,8 +17,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <PlotSettingsProvider>
             <Navbar />
             <div className="flex flex-1 overflow-hidden">
-              <SidebarLayout />
-              <main className="flex-1 h-[calc(100vh-4rem)] overflow-auto">
+              <Sidebar />
+              <main className="flex-1 h-[calc(100vh-52px)] overflow-auto">
                 {children}
               </main>
             </div>

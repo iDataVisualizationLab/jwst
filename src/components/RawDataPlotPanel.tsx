@@ -6,45 +6,85 @@ import { Rnd } from 'react-rnd';
 import dynamic from 'next/dynamic';
 import { usePlotSettings } from '@/context/PlotSettingsContext';
 import { buildTraces } from '@/utils/buildTraces';
-import { PlotTrace } from '@/types/PlotTypes';
+import { PlotTrace, AveragePointCustomData } from '@/types/PlotTypes';
 import { RenderTooltip } from '@/constants/hoverUtils';
 // import * as Plotly from 'plotly.js-dist-min';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 type RawDataPlotPanelProps = {
-    rawData: { x: number; y: number; err?: number; customdata?: unknown }[];
+    rawData: {
+        x: number; y: number; err?: number; customdata?: AveragePointCustomData;
+        phase?: number;
+        mjd?: number;
+        time?: Date | string;
+        second?: number;
+        minute?: number;
+        hour?: number;
+        day?: number;
+    }[];
+    averageValue?: number;
+    averageError?: number;
     onClose: () => void;
     onPointClick?: (
         figure: { data: unknown[]; layout: Partial<Plotly.Layout> },
         pt: Plotly.PlotDatum
     ) => void;
+    posX?: number;
+    posY?: number;
     annotations?: Partial<Plotly.Annotations>[];
     color?: string;
+    onHover?: (content: React.ReactNode, position: { left: number; top: number }) => void;
+    onUnhover?: () => void;
 };
 
-export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annotations, color }: RawDataPlotPanelProps) {
+export default function RawDataPlotPanel({ rawData, averageValue, averageError, onClose, onPointClick, posX, posY, annotations, color, onHover, onUnhover }: RawDataPlotPanelProps) {
     const {
         plotType,
         pointSize,
         lineWidth,
         errorBars,
-        xAxis,
+        xAxis
     } = usePlotSettings();
 
     const isResizing = useRef(false);
-    const [width, setWidth] = useState(1000);
-    const [height, setHeight] = useState(500);
-    const [positionX, setPositionX] = useState(100);
-    const [positionY, setPositionY] = useState(100);
-    const [tooltipContent, setTooltipContent] = useState<React.ReactNode | null>(null);
-    const [tooltipPosition, setTooltipPosition] = useState<{ left: number; top: number } | null>(null);
-    // const [PlotlyLib, setPlotlyLib] = useState<typeof import('plotly.js-dist-min') | null>(null);
-    const [showExtreme, setShowExtreme] = useState(true);
+    const [width, setWidth] = useState(500);
+    const [height, setHeight] = useState(250);
+    const [positionX, setPositionX] = useState(posX);
+    const [positionY, setPositionY] = useState(posY);
+    const [figure, setFigure] = useState<{ data: Partial<Plotly.Data>[]; layout: Partial<Plotly.Layout> }>({ data: [], layout: {} });
+    const [rawTrace, setRawTrace] = useState<PlotTrace[]>([]);
 
-    // useEffect(() => {
-    //     import('plotly.js-dist-min').then(setPlotlyLib);
-    // }, []);
+
+    const xAxisOptions = [
+        { value: 'phase', label: 'Phase' },
+        { value: 'mjd', label: 'MJD' },
+        { value: 'time', label: 'Datetime' },
+        { value: 'day', label: 'Days' },
+        { value: 'hour', label: 'Hours' },
+        { value: 'minute', label: 'Minutes' },
+        { value: 'second', label: 'Seconds' },
+    ];
+    const [selectedXAxis, setSelectedXAxis] = useState(xAxis || 'phase');
+
+    function nudgeModal(setX: React.Dispatch<React.SetStateAction<number | undefined>>) {
+        setX(prev => (typeof prev === 'number' ? prev + 1 : 1));
+        setTimeout(() => setX(prev => (typeof prev === 'number' ? prev - 1 : 0)), 10);
+    }
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            return nudgeModal(setPositionX);
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        setPositionX(posX);
+        setPositionY(posY);
+    }, [posX, posY]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function handleHover(e: any) {
         const pt = e.points[0];
         const cd = pt.customdata ?? {};
@@ -55,110 +95,172 @@ export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annot
             err: pt.error_y?.array?.[pt.pointIndex],
             traceColor: pt.fullData?.marker?.color ?? '#000',
         };
-
-
-        setTooltipContent(<RenderTooltip cd={hoverData} />);
-
-        const bbox = pt.bbox;
-        setTooltipPosition({ left: bbox.x0, top: bbox.y0 });
+        onHover?.(<RenderTooltip cd={hoverData} />, { left: e.event.clientX - (positionX ?? 0) / 2, top: e.event.clientY - (positionY ?? 0) / 2 });
+        // onHover?.(<RenderTooltip cd={hoverData} />, { left: e.event.clientX, top: e.event.clientY});
     }
     function handleUnhover() {
-        setTooltipContent(null);
-        setTooltipPosition(null);
+        onUnhover?.();
     }
 
-    // if (!PlotlyLib) return null;
+    useEffect(() => {
 
-    const x = rawData.map(p => p.x);
-    const y = rawData.map(p => p.y);
-    const err = rawData.map(p => p.err ?? 0);
-    const customdata = rawData.map(p => p.customdata ?? {});
+        // Ensure x is a homogeneous array (all numbers, all strings, or all Dates)
+        let x: number[] | string[] | Date[];
+        const rawX = rawData.map((p) => p[selectedXAxis as keyof typeof p]);
+        if (rawX.every(val => typeof val === 'number')) {
+            x = rawX as number[];
+        } else if (rawX.every(val => typeof val === 'string')) {
+            x = rawX as string[];
+        } else if (rawX.every(val => val instanceof Date)) {
+            x = rawX as Date[];
+        } else {
+            // fallback to p.x (number[])
+            x = rawData.map(p => p.x);
+        }
+        // console.log('x values:', x);
+        const y = rawData.map(p => p.y);
+        const err = rawData.map(p => p.err ?? 0);
+        const customdata = rawData.map(p => p.customdata ?? {});
 
-    const traces: PlotTrace[] = buildTraces({
-        x,
-        y,
-        err,
-        customdata,
-        hoverinfo: 'none',
-        plotType: plotType as 'lines' | 'markers' | 'lines+markers',
-        errorBars: errorBars as 'bar' | 'hide' | 'separate',
-        name: 'Raw Points',
-        color: color ?? '#1f77b4',
-        pointSize,
-        lineWidth,
-    });
+        const traces: PlotTrace[] = buildTraces({
+            x,
+            y,
+            err,
+            customdata,
+            hoverinfo: 'none',
+            plotType: plotType as 'lines' | 'markers' | 'lines+markers',
+            errorBars: errorBars as 'bar' | 'hide' | 'separate',
+            name: 'Raw Points',
+            color: color ?? '#1f77b4',
+            pointSize,
+            lineWidth,
+        });
 
-    const minX = Math.min(...x);
-    const maxX = Math.max(...x);
-    const minY = Math.min(...y);
-    const maxY = Math.max(...y);
+        let minX: number, maxX: number;
+        if (Array.isArray(x) && x.length > 0 && typeof x[0] === 'number') {
+            minX = Math.min(...(x as number[]));
+            maxX = Math.max(...(x as number[]));
+        } else if (Array.isArray(x) && x.length > 0 && typeof x[0] === 'string') {
+            // For string x-axis (e.g., datetime), use indices for min/max
+            minX = 0;
+            maxX = (x as string[]).length - 1;
+        } else if (Array.isArray(x) && x.length > 0 && x[0] instanceof Date) {
+            // For Date x-axis, convert to timestamps
+            const timestamps = (x as Date[]).map(date => date.getTime());
+            minX = Math.min(...timestamps);
+            maxX = Math.max(...timestamps);
+        } else {
+            minX = 0;
+            maxX = 1;
+        }
 
-    const extremePoints = rawData.filter(p =>
-        p.x === minX || p.x === maxX || p.y === minY || p.y === maxY
-    );
+        const minY = Math.min(...y);
+        const maxY = Math.max(...y);
+        const averageLineTrace: PlotTrace = {
+            x: [minX, maxX],
+            y: [averageValue ?? 0, averageValue ?? 0],
+            mode: 'lines',
+            type: 'scatter',
+            name: 'Average',
+            line: {
+                color: 'black',
+                width: 2,
+                dash: 'dashed',
+            },
+            hoverinfo: 'skip',
+        };
 
-    const seen = new Set<string>();
+        const averageErrorUpperTrace: PlotTrace | null =
+            averageValue != null && averageError != null
+                ? {
+                    x: [minX, maxX],
+                    y: [averageValue + averageError, averageValue + averageError],
+                    mode: 'lines',
+                    type: 'scatter',
+                    name: 'Avg + Error',
+                    line: {
+                        color: 'rgba(0,0,0,0.7)',
+                        width: 1,
+                        dash: 'dot',
+                    },
+                    hoverinfo: 'skip',
+                }
+                : null;
 
-    const imageOverlays = extremePoints
-        .map(p => {
-            const filename = p.customdata?.filename;
-            if (!filename) return null;
-            const src = `https://raw.githubusercontent.com/iDataVisualizationLab/jwst-data/main/img/thumbnails/${filename}`;
-            if (seen.has(src)) return null;
-            seen.add(src);
-            return {
-                source: src,
-                xref: 'x',
-                yref: 'y',
-                x: p.x,
-                y: p.y + 10,
-                sizex: 0.002,
-                sizey: 50,
-                xanchor: 'left',
-                yanchor: 'bottom',
-                layer: 'below',
-                sizing: 'contain',
-                opacity: 1,
-            } as Partial<Plotly.Layout['images'][number]>;
-        })
-        .filter((img): img is Partial<Plotly.Layout['images'][number]> => img !== null);
+        const averageErrorLowerTrace: PlotTrace | null =
+            averageValue != null && averageError != null
+                ? {
+                    x: [minX, maxX],
+                    y: [averageValue - averageError, averageValue - averageError],
+                    mode: 'lines',
+                    type: 'scatter',
+                    name: 'Avg - Error',
+                    line: {
+                        color: 'rgba(0,0,0,0.7)',
+                        width: 1,
+                        dash: 'dot',
+                    },
+                    hoverinfo: 'skip',
+                }
+                : null;
 
-    const imagePointTrace: PlotTrace = {
-        x: extremePoints.map(p => p.x),
-        y: extremePoints.map(p => p.y),
-        // text: extremePoints.map(p => p.customdata?.filename ?? 'Image'),
-        customdata: extremePoints.map(p => p.customdata),
-        type: 'scatter',
-        mode: 'markers+text',
-        name: 'Extreme Points',
-        visible: showExtreme ? true : 'legendonly',
-        marker: {
-            symbol: 'circle',
-            size: 10,
-            color: 'red',
-        },
-        textposition: 'top center',
-        hoverinfo: 'none',
-        // hovertemplate: `${xAxis} = %{x:.5f}<br>flux = %{y:.2e}<extra></extra>`,
-    };
-    const xPadding = 0.001;
-    const yPadding = 60; // match or exceed image `sizey`
+        let xPadding: number = 0;
 
-    const layout: Partial<Plotly.Layout> = {
-        autosize: true,
-        margin: { l: 40, r: 20, t: 20, b: 30 },
-        annotations: annotations ?? [],
-        images: showExtreme ? imageOverlays : [],
-        modebar: {
-            orientation: 'v', // Vertical modebar
-        },
-        xaxis: {
-            range: [minX - xPadding, maxX + xPadding],
-        },
-        yaxis: {
-            range: [minY - yPadding, maxY + yPadding],
-        },
-    };
+        // If x-axis is Date, we already converted to timestamps above
+        if (
+            Array.isArray(x) &&
+            x.length > 0 &&
+            x[0] instanceof Date &&
+            typeof minX === 'number' &&
+            typeof maxX === 'number'
+        ) {
+            // Add fixed 1-second padding for date axes (timestamps)
+            xPadding = 10000; // 1 second in ms
+        } else if (typeof minX === 'number' && typeof maxX === 'number') {
+            const range = maxX - minX;
+
+            if (range > 1000) {
+                xPadding = 500;
+            } else if (range > 100) {
+                xPadding = 50;
+            } else if (range > 10) {
+                xPadding = 5;
+            } else if (range > 1) {
+                xPadding = 0.1;
+            } else if (range > 0.1) {
+                xPadding = 0.01;
+            } else {
+                xPadding = 0.001;
+            }
+        }
+        const yPadding = 60; // match or exceed image `sizey`
+
+        const layout: Partial<Plotly.Layout> = {
+            autosize: true,
+            margin: { l: 40, r: 20, t: 20, b: 30 },
+            annotations: annotations ?? [],
+            // images: showExtreme ? imageOverlays : [],
+            modebar: {
+                orientation: 'v', // Vertical modebar
+            },
+            xaxis: {
+                range: [minX - xPadding, maxX + xPadding],
+            },
+            yaxis: {
+                range: [minY - yPadding, maxY + yPadding],
+            },
+        };
+        setRawTrace(traces);
+        setFigure({
+            data: [
+                ...traces as Partial<Plotly.Data>[],
+                ...(averageValue != null ? [averageLineTrace] : []),
+                ...(averageErrorUpperTrace ? [averageErrorUpperTrace] : []),
+                ...(averageErrorLowerTrace ? [averageErrorLowerTrace] : []),
+            ].map(trace => trace as Partial<Plotly.Data>), layout
+        });
+    }, [rawData, selectedXAxis, plotType, errorBars, pointSize, lineWidth, color]);
+
 
     const handleResizeStart = () => {
         // Set the resizing flag to true to prevent auto-centering
@@ -166,6 +268,7 @@ export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annot
         console.log('[Debug] Resize started - Disabling auto-centering');
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleResize = (e: any, direction: string, ref: HTMLElement, delta: any, position: any) => {
         // Get new dimensions
         const newWidth = parseInt(ref.style.width);
@@ -195,14 +298,14 @@ export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annot
         <Rnd
             size={{ width, height }}
             bounds="parent"
-            position={{ x: positionX, y: positionY }}
+            position={{ x: positionX ?? 0, y: positionY ?? 0 }}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onDragStop={(e: any, d: any) => { setPositionX(d.x); setPositionY(d.y); }}
             onResizeStart={handleResizeStart}
             onResize={handleResize}
             onResizeStop={() => {
                 isResizing.current = false;
-                setTooltipContent(null);
-                setTooltipPosition(null);
+                handleUnhover();
             }}
             minWidth={300}
             minHeight={300}
@@ -225,11 +328,34 @@ export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annot
             }}
         >
             <div className="flex flex-col w-full h-full">
-                <div className="flex justify-between items-center px-3 py-1 border-b bg-gray-100 cursor-move drag-handle">
-                    <span className="font-semibold text-sm">Raw Points</span>
+                <div className="flex justify-between items-center px-3 py-2 border-b bg-gray-100 drag-handle text-sm">
+                    {/* Title */}
+                    <span className="font-semibold text-gray-800">Raw Points</span>
+
+                    {/* X-Axis Dropdown */}
+                    <div className="flex items-center gap-2">
+                        <label htmlFor="x-axis-select" className="text-gray-700 font-medium">
+                            x-axis:
+                        </label>
+                        <select
+                            id="x-axis-select"
+                            className="border border-gray-300 rounded-md px-2 py-1 text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                            value={selectedXAxis}
+                            onChange={(e) => setSelectedXAxis(e.target.value)}
+                        >
+                            {xAxisOptions.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Close Button */}
                     <button
-                        className="text-red-600 hover:text-red-800 text-sm"
+                        className="text-gray-400 hover:text-red-600 transition-colors text-lg"
                         onClick={onClose}
+                        title="Close"
                     >
                         ✕
                     </button>
@@ -237,37 +363,22 @@ export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annot
                 <div className="flex-1 overflow-hidden h-full w-full relative">
                     <Plot
                         divId="raw-data-plot"
-                        data={[imagePointTrace, ...traces] as Partial<Plotly.Data>[]}
-                        layout={layout}
+                        data={figure.data as Partial<Plotly.Data>[]}
+                        layout={{ ...figure.layout }}
                         config={{ responsive: true, displayModeBar: true }}
                         useResizeHandler={true}
                         onHover={handleHover}
                         onUnhover={handleUnhover}
-                        onLegendClick={(e) => {
-                            const trace = e?.data?.[e.curveNumber];
-                            if (trace?.name === 'Extreme Points') {
-                                // Toggle and track visibility manually
-                                setShowExtreme(prev => !prev);
-                                return false; // Prevent default Plotly behavior
-                            }
-                            return true; // Allow default behavior for other traces
-                        }}
                         onClick={(e) => {
                             console.log('clicked point:', e.points?.[0]);
                             if (onPointClick && e.points?.[0]) {
-                                onPointClick({ data: [imagePointTrace, ...traces] as Partial<Plotly.Data>[], layout }, e.points[0]);
+                                onPointClick({ data: [...rawTrace] as Partial<Plotly.Data>[], layout: figure.layout }, e.points[0]);
                             }
                         }}
                         style={{ width: '100%', height: '100%' }}
                     />
-
-                    {tooltipContent && tooltipPosition && (
-                        <div className="absolute z-50 pointer-events-none" style={{ left: tooltipPosition.left + 10, top: tooltipPosition.top + 10 }}>
-                            {tooltipContent}
-                        </div>
-                    )}
                 </div>
             </div>
-        </Rnd>
+        </Rnd >
     );
 }

@@ -1,10 +1,7 @@
 'use client';
 
-import { useEffect, useState, Fragment } from 'react';
-import dynamic from 'next/dynamic';
+import { Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { usePlotSettings } from '@/context/PlotSettingsContext';
-import { digitize, weightedAvg } from '@/libs/mathUtils';
 
 /*
  ---------------------------------------------------------------------------
@@ -21,6 +18,7 @@ interface ImageModalProps {
     mjd?: number;
     filename?: string;
     rows?: Array<{
+      color?: string;
       epoch: string;
       r_in: string;
       r_out: string;
@@ -77,6 +75,7 @@ export function ImageModal({
                     <table className="min-w-full text-sm border border-gray-300 rounded overflow-hidden">
                       <thead className="bg-gray-100 text-black font-semibold">
                         <tr>
+                          <th className="px-3 py-2 text-left"> </th>
                           <th className="px-3 py-2 text-left">Epoch</th>
                           <th className="px-3 py-2 text-left">r_in</th>
                           <th className="px-3 py-2 text-left">r_out</th>
@@ -86,10 +85,22 @@ export function ImageModal({
                       <tbody>
                         {details.rows.map((row, idx) => (
                           <tr key={idx} className="border-t hover:bg-gray-50">
+                            <td className="px-3 py-1">
+                              {row.color ? (
+                                <div
+                                  className="w-4 h-4 rounded-full border border-gray-300"
+                                  style={{ backgroundColor: row.color }}
+                                  title={row.color}
+                                />
+                              ) : (
+                                <div className="w-4 h-4 rounded-full border border-gray-200 bg-white" title="No color" />
+                              )}
+                            </td>
                             <td className="px-3 py-1 font-mono text-black">{row.epoch}</td>
                             <td className="px-3 py-1 font-mono text-black">{row.r_in}</td>
                             <td className="px-3 py-1 font-mono text-black">{row.r_out}</td>
-                            <td className="px-3 py-1 text-blue-600 font-semibold">{row.y.toFixed(2)}</td>
+                            <td className="px-3 py-1 text-black font-semibold">{row.y.toFixed(2)}</td>
+                            {/* <td className="px-3 py-1 text-blue-600 font-semibold">{row.y.toFixed(2)}</td> */}
                           </tr>
                         ))}
                       </tbody>
