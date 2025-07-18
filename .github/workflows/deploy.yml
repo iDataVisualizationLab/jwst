@@ -45,31 +45,7 @@ jobs:
           sudo journalctl --vacuum-time=1s
           echo "Remaining space:"
           df -h
-      
-      - name: Delete Old Artifacts
-        uses: actions/github-script@v6
-        id: artifact
-        with:
-          script: |
 
-            if (context.repo.owner === 'rinriko') {
-              const res = await github.rest.actions.listArtifactsForRepo({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-              });
-
-              for (const { id } of res.data.artifacts) {
-                await github.rest.actions.deleteArtifact({
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  artifact_id: id,
-                });
-              }
-
-              console.log(`Deleted ${res.data.artifacts.length} artifacts.`);
-            } else {
-              console.log("Skipping artifact deletion: not in the main repo context.");
-            }
       - name: Delete All Artifacts
         uses: actions/github-script@v6
         with:
