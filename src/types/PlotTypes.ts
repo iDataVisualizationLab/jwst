@@ -1,7 +1,8 @@
 export type PlotTrace = {
-  x: number[];
+  x: number[] | string[] | Date[];
   y: number[];
   err?: number[];
+  error_y?: { type: 'data'; array: number[] };
   type?: string;
   mode?: string;
   customdata?: unknown[];

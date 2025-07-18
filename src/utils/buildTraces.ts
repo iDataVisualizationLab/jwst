@@ -4,7 +4,7 @@ export function buildTraces({
   x, y, err, customdata, hoverinfo, hovertemplate,
   plotType, errorBars, name, wave, color, pointSize, lineWidth
 }: {
-  x: number[];
+  x: number[] | string[] | Date[];
   y: number[];
   err: number[];
   customdata: unknown[];

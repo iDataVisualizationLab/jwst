@@ -30,13 +30,28 @@ export default function LightCurvePlot() {
   const [modalInfo, setModalInfo] = useState<ModalInfo | null>(null);
   const [tooltipContent, setTooltipContent] = useState<React.ReactNode | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState<{ left: number; top: number } | null>(null);
-  const [rawPlot, setRawPlot] = useState<{ x: number; y: number; err?: number; customdata: unknown }[] | null>(null);
+  const [rawPlot, setRawPlot] = useState<{
+    x: number; y: number; err?: number; customdata: unknown;
+    phase?: number;
+    mjd?: number;
+    time?: number;
+    second?: number;
+    minute?: number;
+    hour?: number;
+    day?: number;
+  }[] | null>(null);
   const [rawColor, setRawColor] = useState<string>('#1f77b4');
   const [rawAverageValue, setRawAverageValue] = useState<number | undefined>(undefined);
   const [rawAverageError, setRawAverageError] = useState<number | undefined>(undefined);
   const [posX, setPosX] = useState<number | undefined>(undefined);
   const [posY, setPosY] = useState<number | undefined>(undefined);
+  const [fig, setFig] = useState<{ data: PlotTrace[] }>({ data: [] });
 
+  function mjdToDate(mjd: number): Date {
+    const MJD_EPOCH = Date.UTC(1858, 10, 17); // November 17, 1858
+    const msPerDay = 86400 * 1000;
+    return new Date(MJD_EPOCH + mjd * msPerDay);
+  }
 
   // const [selectedImages, setSelectedImages] = useState<
   //   { id: string; imgSrc: string; label: string; cd: any }[]
@@ -91,7 +106,7 @@ export default function LightCurvePlot() {
             r_out: string,
             avgPointRawMap: Record<string, { x: number; y: number; err: number; customdata: unknown }[]>
           ) => {
-            let x: number[] = [], y: number[] = [], err: number[] = [], customdata: unknown[] = [];
+            let x: (number | string | Date)[] = [], y: number[] = [], err: number[] = [], customdata: unknown[] = [];
             const type = wave.toLowerCase()
             if (dataType === 'average') {
               if (xAxis === 'phase') {
@@ -107,6 +122,22 @@ export default function LightCurvePlot() {
                 const binPhases: number[][] = Array.from({ length: noOfBins }, () => [] as number[]);
                 const binCustomdata: unknown[][] = Array.from({ length: noOfBins }, () => [] as unknown[]);
 
+
+                // Optional: include time context for richer rawPoints
+                const mjd = Array.isArray(json.time_mjd) ? json.time_mjd : [];
+                const time = Array.isArray(json.time_mjd) ? json.time_mjd : [];
+                const second = Array.isArray(json.time_second) ? json.time_second : [];
+                const minute = Array.isArray(json.time_minute) ? json.time_minute : [];
+                const hour = Array.isArray(json.time_hour) ? json.time_hour : [];
+                const day = Array.isArray(json.time_day) ? json.time_day : [];
+                // Optional: time-context bins
+                const binMjd = Array.from({ length: noOfBins }, () => [] as number[]);
+                const binSecond = Array.from({ length: noOfBins }, () => [] as number[]);
+                const binMinute = Array.from({ length: noOfBins }, () => [] as number[]);
+                const binHour = Array.from({ length: noOfBins }, () => [] as number[]);
+                const binDay = Array.from({ length: noOfBins }, () => [] as number[]);
+                const binTime = Array.from({ length: noOfBins }, () => [] as number[]);
+
                 const binIndices = digitize(phaseValues, binEdges, false).map(i => i - 1);
                 binIndices.forEach((binIndex, idx) => {
                   if (binIndex >= 0 && binIndex < noOfBins) {
@@ -114,6 +145,13 @@ export default function LightCurvePlot() {
                     binErrs[binIndex].push(fluxErr[idx]);
                     binPhases[binIndex].push(phaseValues[idx]);
                     binCustomdata[binIndex].push(original_customdata[idx]);
+                    // Add time context to bins
+                    binMjd[binIndex].push(mjd[idx]);
+                    binTime[binIndex].push(time[idx]);
+                    binSecond[binIndex].push(second[idx]);
+                    binMinute[binIndex].push(minute[idx]);
+                    binHour[binIndex].push(hour[idx]);
+                    binDay[binIndex].push(day[idx]);
                   }
                 });
 
@@ -137,7 +175,14 @@ export default function LightCurvePlot() {
                       x: binPhases[i][j],
                       y: yVal,
                       err: binErrs[i][j],
-                      customdata: binCustomdata[i][j]
+                      customdata: binCustomdata[i][j],
+                      phase: binPhases[i][j],
+                      mjd: binMjd[i][j],
+                      time: binTime[i][j],
+                      second: binSecond[i][j],
+                      minute: binMinute[i][j],
+                      hour: binHour[i][j],
+                      day: binDay[i][j],
                     }));
 
                     const key = `${type}_${epoch}_${r_in}_${r_out}_${center.toFixed(5)}`;
@@ -155,17 +200,36 @@ export default function LightCurvePlot() {
                 const fluxErr = Array.isArray(json.psf_flux_unc_time) ? json.psf_flux_unc_time : [];
                 const timeArr = Array.isArray(json[timeKey]) ? json[timeKey] : [];
 
+                const phase = Array.isArray(json['phase_values_phase']) ? json['phase_values_phase'] : [];
+                const mjd = Array.isArray(json['time_mjd']) ? json['time_mjd'] : [];
+                const time = Array.isArray(json['time_mjd']) ? json['time_mjd'] : [];
+                const second = Array.isArray(json['time_second']) ? json['time_second'] : [];
+                const minute = Array.isArray(json['time_minute']) ? json['time_minute'] : [];
+                const hour = Array.isArray(json['time_hour']) ? json['time_hour'] : [];
+                const day = Array.isArray(json['time_day']) ? json['time_day'] : [];
+
+
                 const original_customdata = Array.isArray(json.customdata_time) ? json.customdata_time : [];
 
                 const chunkSize = noOfDataPoint;
                 const chunks = Math.floor(flux.length / chunkSize);
 
                 for (let i = 0; i < chunks; i++) {
-                  const fc = flux.slice(i * chunkSize, (i + 1) * chunkSize);
-                  const ec = fluxErr.slice(i * chunkSize, (i + 1) * chunkSize);
-                  const tc = timeArr.slice(i * chunkSize, (i + 1) * chunkSize);
-                  const cc = original_customdata.slice(i * chunkSize, (i + 1) * chunkSize);
+                  const remStart = i * chunkSize;
+                  const remEnd = (i + 1) * chunkSize;
+                  const fc = flux.slice(remStart, remEnd);
+                  const ec = fluxErr.slice(remStart, remEnd);
+                  const tc = timeArr.slice(remStart, remEnd);
+                  const cc = original_customdata.slice(remStart, remEnd);
                   const [avg, avgErr] = weightedAvg(fc, ec);
+
+                  const mjdRem = mjd.slice(remStart, remEnd);
+                  const timeRem = time.slice(remStart, remEnd);
+                  const secondRem = second.slice(remStart, remEnd);
+                  const minuteRem = minute.slice(remStart, remEnd);
+                  const hourRem = hour.slice(remStart, remEnd);
+                  const dayRem = day.slice(remStart, remEnd);
+                  const phaseRem = phase.slice(remStart, remEnd);
 
                   const center = tc.reduce((a, b) => a + b) / tc.length;
                   x.push(center);
@@ -179,14 +243,26 @@ export default function LightCurvePlot() {
                     phase: center.toFixed(5),
                     avgErr
                   });
+                  // let rawPoints = fc.map((yVal, j) => ({
                   const rawPoints = fc.map((yVal, j) => ({
                     x: tc[j],
                     y: yVal,
                     err: ec[j],
-                    customdata: cc[j]
+                    customdata: cc[j],
+                    phase: phaseRem[j],
+                    mjd: mjdRem[j],
+                    second: secondRem[j],
+                    minute: minuteRem[j],
+                    hour: hourRem[j],
+                    day: dayRem[j],
+                    time: timeRem[j],
                   }));
 
                   const key = `${type}_${epoch}_${r_in}_${r_out}_${center.toFixed(5)}`;
+                  // rawPoints = rawPoints.map(p => ({
+                  //   ...p,
+                  //   time: mjdToDate(Number(p.time))
+                  // }));
                   avgPointRawMap[key] = rawPoints;
                 }
 
@@ -194,6 +270,15 @@ export default function LightCurvePlot() {
                 if (remStart < flux.length) {
                   const fc = flux.slice(remStart), ec = fluxErr.slice(remStart), tc = timeArr.slice(remStart), cc = original_customdata.slice(remStart);
                   const [avg, avgErr] = weightedAvg(fc, ec);
+
+                  const mjdRem = mjd.slice(remStart);
+                  const timeRem = time.slice(remStart);
+                  const secondRem = second.slice(remStart);
+                  const minuteRem = minute.slice(remStart);
+                  const hourRem = hour.slice(remStart);
+                  const dayRem = day.slice(remStart);
+                  const phaseRem = phase.slice(remStart);
+
                   // x.push(tc.reduce((a, b) => a + b) / tc.length);
                   const center = tc.reduce((a, b) => a + b) / tc.length;
                   x.push(center);
@@ -207,14 +292,27 @@ export default function LightCurvePlot() {
                     phase: center.toFixed(5),
                     avgErr
                   });
+                  // let rawPoints = fc.map((yVal, j) => ({
                   const rawPoints = fc.map((yVal, j) => ({
                     x: tc[j],
                     y: yVal,
                     err: ec[j],
-                    customdata: cc[j]
+                    customdata: cc[j],
+                    phase: phaseRem[j],
+                    mjd: mjdRem[j],
+                    second: secondRem[j],
+                    minute: minuteRem[j],
+                    hour: hourRem[j],
+                    day: dayRem[j],
+                    time: timeRem[j],
                   }));
 
                   const key = `${type}_${epoch}_${r_in}_${r_out}_${center.toFixed(5)}`;
+
+                  // rawPoints = rawPoints.map(p => ({
+                  //   ...p,
+                  //   time: mjdToDate(Number(p.time))
+                  // }));
                   avgPointRawMap[key] = rawPoints;
                 }
               }
@@ -225,15 +323,30 @@ export default function LightCurvePlot() {
               err = xAxis === 'phase' ? (Array.isArray(json.psf_flux_unc_phase) ? json.psf_flux_unc_phase : []) : (Array.isArray(json.psf_flux_unc_time) ? json.psf_flux_unc_time : []);
               customdata = xAxis === 'phase' ? (Array.isArray(json.customdata_phase) ? json.customdata_phase : []) : (Array.isArray(json.customdata_time) ? json.customdata_time : []);
               if (xAxis === 'phase') {
-                x = x.concat(x.map(v => v + 1));
+                x = x.concat(x.map(v => typeof v === 'number' ? v + 1 : v));
                 y = y.concat(y);
                 err = err.concat(err);
                 customdata = customdata.concat(customdata);
               }
             }
+            if (xAxis === 'time') {
+              x = x.map(v => mjdToDate(Number(v)));
+            }
+            // Ensure x is a homogeneous array (all numbers, all strings, or all Dates)
+            let homogeneousX: number[] | string[] | Date[];
+            if (x.every(v => typeof v === 'number')) {
+              homogeneousX = x as number[];
+            } else if (x.every(v => typeof v === 'string')) {
+              homogeneousX = x as string[];
+            } else if (x.every(v => v instanceof Date)) {
+              homogeneousX = x as Date[];
+            } else {
+              // fallback: convert all to string
+              homogeneousX = x.map(v => v instanceof Date ? v.toISOString() : String(v));
+            }
 
             const traces = buildTraces({
-              x, y, err, customdata,
+              x: homogeneousX, y, err, customdata,
               hoverinfo: 'none',
               plotType: plotType as 'lines' | 'markers' | 'lines+markers', errorBars: errorBars as 'bar' | 'hide' | 'separate', name: `${epoch}.${r1}.${r2}`, wave, color, pointSize, lineWidth
             });
@@ -257,7 +370,7 @@ export default function LightCurvePlot() {
       }
 
       const layout: PlotLayout = {
-        height: 800,
+        height: 500,
         grid: { rows: 2, columns: 1, pattern: 'independent' },
         margin: { l: 50, r: 30, t: 40, b: 40 },
         xaxis: {
@@ -279,7 +392,10 @@ export default function LightCurvePlot() {
         annotations: annotations,
         legend: { font: { size: legendFontSize }, groupclick: 'toggleitem' },
         hoverlabel: { font: { size: tooltipFontSize } },
-        font: { size: labelFontSize }
+        font: { size: labelFontSize },
+        modebar: {
+          orientation: 'v', // Vertical modebar
+        },
       };
 
       const fullData = [
@@ -289,6 +405,7 @@ export default function LightCurvePlot() {
 
       setSettings({ rawFigure: { tracesSW: rawTracesSW, tracesLW: rawTracesLW } });
       setSettings({ figure: { data: fullData, layout: layout } });
+      setFig({ data: fullData });
       setSettings({ avgPointRawMap });
       setLoading(false);
     }
@@ -359,19 +476,6 @@ export default function LightCurvePlot() {
     return luminance > 0.6 ? 'black' : 'white';
   }
 
-
-
-
-  // interface AveragePointCustomData {
-  //   type?: string;
-  //   epoch?: string;
-  //   r_in?: string;
-  //   r_out?: string;
-  //   phase?: string | number;
-  //   avgErr?: number;
-  //   [key: string]: unknown;
-  // }
-
   interface Match {
     x: number | string | Date;
     y: number;
@@ -390,18 +494,20 @@ export default function LightCurvePlot() {
 
       const rect = container.getBoundingClientRect();
 
-      const pointX = rect.left + (pt.bbox.x0 + pt.bbox.x1) / 2;
-      const pointY = rect.top + (pt.bbox.y0 + pt.bbox.y1) / 2;
+      // const pointX = rect.left + (pt.bbox.x0 + pt.bbox.x1) / 2;
+      // const pointY = rect.top + (pt.bbox.y0 + pt.bbox.y1) / 2;
+      const pointX = (pt.bbox.x0 + pt.bbox.x1) / 2;
+      const pointY = (pt.bbox.y0 + pt.bbox.y1) / 2;
 
-      const modalWidth = 500;
+      // const modalWidth = 500;
       const margin = 10;
 
-      const newX = pointX + modalWidth + margin < window.innerWidth
+      const newX = pointX + rect.left + margin < window.innerWidth
         ? pointX + margin
-        : Math.max(margin, pointX - modalWidth - margin); // clamp left
+        : Math.max(margin, pointX - rect.left - margin); // clamp left
 
-      const modalHeight = 300;
-      const newY = Math.min(pointY + margin, window.innerHeight - modalHeight - margin);
+      // const modalHeight = 300;
+      const newY = Math.min(pointY + rect.top + margin, window.innerHeight - rect.top - margin);
 
 
       setPosX(newX);
@@ -467,7 +573,22 @@ export default function LightCurvePlot() {
     const rawPoints = avgPointRawMap[key];
 
     if (rawPoints) {
+      clearAll()
       setRawPlot(rawPoints);
+      setFig({
+        data: [
+          {
+            x: rawPoints.map(p => p.x),
+            y: rawPoints.map(p => p.y),
+            err: rawPoints.map(p => p.err),
+            customdata: rawPoints.map(p => p.customdata),
+            type: 'scatter',
+            mode: 'markers',
+            marker: { color: String(pt.fullData?.marker?.color ?? '#1f77b4'), size: pointSize },
+            name: `Raw Points for ${type} at Phase ${phase}`,
+          }
+        ]
+      });
       setRawAverageValue(averageY);
       setRawAverageError(averageErr);
       setUseRawMode(true);
@@ -599,6 +720,7 @@ export default function LightCurvePlot() {
 
   function clearAll() {
     setRawPlot(null);
+    setFig({ data: [] });
     setUseRawMode(false);
     setAnnotations([]);
     imageCounter.current = 1; // reset counter
@@ -633,7 +755,7 @@ export default function LightCurvePlot() {
 
   return (
     <div className="relative p-6">
-      <h1 className="text-xl font-bold mb-4">ZTF J1539 PSF Light Curves</h1>
+      <h1 className="text-xl text-black font-bold mb-4">ZTF J1539 PSF Light Curves</h1>
       {loading && <p>Loading plot…</p>}
       {figure && (
         <Plot
@@ -694,7 +816,7 @@ export default function LightCurvePlot() {
 
                   const seen = new Set<string>();
 
-                  const matches = figure.data.flatMap(trace => {
+                  const matches = fig.data.flatMap(trace => {
                     if (!Array.isArray(trace.customdata)) return [];
 
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -709,6 +831,7 @@ export default function LightCurvePlot() {
                           r_in: trCd.r_in,
                           r_out: trCd.r_out,
                           y: trace.y?.[i],
+                          color: trace.marker?.color,
                         };
                       }
                       return null;
@@ -722,7 +845,7 @@ export default function LightCurvePlot() {
                       phase: typeof img.cd?.phase === 'number' ? img.cd?.phase : (img.cd?.phase !== undefined ? Number(img.cd?.phase) : undefined),
                       mjd: typeof img.cd?.mjd === 'number' ? img.cd?.mjd : (img.cd?.mjd !== undefined ? Number(img.cd?.mjd) : undefined),
                       filename: img.cd?.filename as string | undefined,
-                      rows: matches as { epoch: string; r_in: string; r_out: string; y: number; }[]
+                      rows: matches as { epoch: string; r_in: string; r_out: string; y: number; color: string | undefined }[]
                     }
                   });
                   // setModalInfo({
@@ -739,7 +862,7 @@ export default function LightCurvePlot() {
                 }}
               >
                 <span
-                  className="absolute top-0 left-0 text-base font-bold px-3 py-1.5 rounded-br"
+                  className="absolute top-0 left-0 text-xs font-semibold px-2 py-1 rounded-br"
                   style={{ backgroundColor: img.bgColor, color: img.fontColor }}
                 >
                   {img.label}
@@ -751,9 +874,9 @@ export default function LightCurvePlot() {
                     // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     setAnnotations(prev => prev.filter(a => (a as any).custom_id !== img.key));
                   }}
-                  className="absolute top-0 right-0 bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-bl text-lg"
+                  className="absolute top-0 right-0 bg-orange-500 hover:bg-orange-600 text-white p-1 rounded-bl"
                 >
-                  <Trash2 size={20} />
+                  <Trash2 size={16} />
                 </button>
                 <img src={img.imgThumbnailsSrc} alt={img.label} className="w-full h-auto object-contain" />
               </div>
@@ -771,11 +894,13 @@ export default function LightCurvePlot() {
       />
       {rawPlot && (
         <RawDataPlotPanel
-          rawData={rawPlot.map(({ x, y, err, customdata }) => ({
-            x,
-            y,
-            err,
-            customdata: customdata as AveragePointCustomData
+          rawData={rawPlot.map(p => ({
+            ...p,
+            customdata: p.customdata as import('@/types/PlotTypes').AveragePointCustomData | undefined,
+            time:
+              typeof p.time === 'number'
+                ? mjdToDate(p.time)
+                : p.time,
           }))}
           averageValue={rawAverageValue}
           averageError={rawAverageError}
@@ -787,10 +912,18 @@ export default function LightCurvePlot() {
           }}
           color={rawColor}
           onPointClick={(figure, pt) => handleOriginalPointClick(figure as { data: PlotTrace[] }, pt)}
+          onHover={(content, position) => {
+            setTooltipContent(content);
+            setTooltipPosition(position);
+          }}
+          onUnhover={() => {
+            setTooltipContent(null);
+            setTooltipPosition(null);
+          }}
         />
       )}
       {tooltipContent && tooltipPosition && (
-        <div className="absolute z-50 pointer-events-none" style={{ left: tooltipPosition.left + 10, top: tooltipPosition.top + 10 }}>
+        <div className="absolute z-9999 pointer-events-none" style={{ left: tooltipPosition.left + 10, top: tooltipPosition.top + 10 }}>
           {tooltipContent}
         </div>
       )}
