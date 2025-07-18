@@ -163,7 +163,7 @@ export default function Sidebar() {
           <div>
             <button
               disabled={true}
-              className="w-full mt-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition"
+              className="w-full mt-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded hover:bg-blue-700 transition disabled:opacity-50"
               onClick={() => alert('Download logic goes here')}
             >
               Download Data
