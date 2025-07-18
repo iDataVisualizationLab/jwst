@@ -1,14 +1,8 @@
 import React from 'react';
 import { usePlotSettings } from '@/context/PlotSettingsContext';
-interface TooltipData {
-  phase: string;
-  type: string;
-  r_in: number;
-  r_out: number;
-  filename: string;
-}
 
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const RenderTooltip: React.FC<{ cd: Record<string, any> }> = ({ cd }) => {
   const { tooltipFontSize, thumbnailsSize } = usePlotSettings();
 

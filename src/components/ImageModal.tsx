@@ -1,10 +1,7 @@
 'use client';
 
-import { useEffect, useState, Fragment } from 'react';
-import dynamic from 'next/dynamic';
+import {  Fragment } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { usePlotSettings } from '@/context/PlotSettingsContext';
-import { digitize, weightedAvg } from '@/libs/mathUtils';
 
 /*
  ---------------------------------------------------------------------------

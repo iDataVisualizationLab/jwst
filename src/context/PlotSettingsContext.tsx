@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState } from 'react';
-import { PlotTrace, PlotLayout, PlotPoints } from '@/types/PlotTypes';
+import { PlotTrace, PlotLayout } from '@/types/PlotTypes';
 
 type PlotSettings = {
   dataType: string;

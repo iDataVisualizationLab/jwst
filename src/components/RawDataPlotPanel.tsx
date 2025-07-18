@@ -6,45 +6,63 @@ import { Rnd } from 'react-rnd';
 import dynamic from 'next/dynamic';
 import { usePlotSettings } from '@/context/PlotSettingsContext';
 import { buildTraces } from '@/utils/buildTraces';
-import { PlotTrace } from '@/types/PlotTypes';
+import { PlotTrace, AveragePointCustomData } from '@/types/PlotTypes';
 import { RenderTooltip } from '@/constants/hoverUtils';
 // import * as Plotly from 'plotly.js-dist-min';
 
 const Plot = dynamic(() => import('react-plotly.js'), { ssr: false });
 
 type RawDataPlotPanelProps = {
-    rawData: { x: number; y: number; err?: number; customdata?: unknown }[];
+    rawData: { x: number; y: number; err?: number; customdata?: AveragePointCustomData }[];
+    averageValue?: number;
+    averageError?: number;
     onClose: () => void;
     onPointClick?: (
         figure: { data: unknown[]; layout: Partial<Plotly.Layout> },
         pt: Plotly.PlotDatum
     ) => void;
+    posX?: number;
+    posY?: number;
     annotations?: Partial<Plotly.Annotations>[];
     color?: string;
 };
 
-export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annotations, color }: RawDataPlotPanelProps) {
+export default function RawDataPlotPanel({ rawData, averageValue, averageError, onClose, onPointClick, posX, posY, annotations, color }: RawDataPlotPanelProps) {
     const {
         plotType,
         pointSize,
         lineWidth,
         errorBars,
-        xAxis,
     } = usePlotSettings();
 
     const isResizing = useRef(false);
-    const [width, setWidth] = useState(1000);
-    const [height, setHeight] = useState(500);
-    const [positionX, setPositionX] = useState(100);
-    const [positionY, setPositionY] = useState(100);
+    const [width, setWidth] = useState(500);
+    const [height, setHeight] = useState(250);
+    const [positionX, setPositionX] = useState(posX);
+    const [positionY, setPositionY] = useState(posY);
     const [tooltipContent, setTooltipContent] = useState<React.ReactNode | null>(null);
     const [tooltipPosition, setTooltipPosition] = useState<{ left: number; top: number } | null>(null);
-    // const [PlotlyLib, setPlotlyLib] = useState<typeof import('plotly.js-dist-min') | null>(null);
     const [showExtreme, setShowExtreme] = useState(true);
 
-    // useEffect(() => {
-    //     import('plotly.js-dist-min').then(setPlotlyLib);
-    // }, []);
+
+    function nudgeModal(setX: React.Dispatch<React.SetStateAction<number | undefined>>) {
+        setX(prev => (typeof prev === 'number' ? prev + 1 : 1));
+        setTimeout(() => setX(prev => (typeof prev === 'number' ? prev - 1 : 0)), 10);
+    }
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            return nudgeModal(setPositionX);
+        }, 100);
+
+        return () => clearTimeout(timer);
+    }, []);
+
+    useEffect(() => {
+        setPositionX(posX);
+        setPositionY(posY);
+    }, [posX, posY]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     function handleHover(e: any) {
         const pt = e.points[0];
         const cd = pt.customdata ?? {};
@@ -92,6 +110,54 @@ export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annot
     const maxX = Math.max(...x);
     const minY = Math.min(...y);
     const maxY = Math.max(...y);
+    const averageLineTrace: PlotTrace = {
+        x: [minX, maxX],
+        y: [averageValue ?? 0, averageValue ?? 0],
+        mode: 'lines',
+        type: 'scatter',
+        name: 'Average',
+        line: {
+            color: 'black',
+            width: 2,
+            dash: 'dashed',
+        },
+        hoverinfo: 'skip',
+    };
+
+    const averageErrorUpperTrace: PlotTrace | null =
+        averageValue != null && averageError != null
+            ? {
+                x: [minX, maxX],
+                y: [averageValue + averageError, averageValue + averageError],
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Avg + Error',
+                line: {
+                    color: 'rgba(0,0,0,0.7)',
+                    width: 1,
+                    dash: 'dot',
+                },
+                hoverinfo: 'skip',
+            }
+            : null;
+
+    const averageErrorLowerTrace: PlotTrace | null =
+        averageValue != null && averageError != null
+            ? {
+                x: [minX, maxX],
+                y: [averageValue - averageError, averageValue - averageError],
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Avg - Error',
+                line: {
+                    color: 'rgba(0,0,0,0.7)',
+                    width: 1,
+                    dash: 'dot',
+                },
+                hoverinfo: 'skip',
+            }
+            : null;
+
 
     const extremePoints = rawData.filter(p =>
         p.x === minX || p.x === maxX || p.y === minY || p.y === maxY
@@ -166,6 +232,7 @@ export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annot
         console.log('[Debug] Resize started - Disabling auto-centering');
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleResize = (e: any, direction: string, ref: HTMLElement, delta: any, position: any) => {
         // Get new dimensions
         const newWidth = parseInt(ref.style.width);
@@ -195,7 +262,8 @@ export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annot
         <Rnd
             size={{ width, height }}
             bounds="parent"
-            position={{ x: positionX, y: positionY }}
+            position={{ x: positionX ?? 0, y: positionY ?? 0 }}
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             onDragStop={(e: any, d: any) => { setPositionX(d.x); setPositionY(d.y); }}
             onResizeStart={handleResizeStart}
             onResize={handleResize}
@@ -237,7 +305,13 @@ export default function RawDataPlotPanel({ rawData, onClose, onPointClick, annot
                 <div className="flex-1 overflow-hidden h-full w-full relative">
                     <Plot
                         divId="raw-data-plot"
-                        data={[imagePointTrace, ...traces] as Partial<Plotly.Data>[]}
+                        data={[
+                            imagePointTrace,
+                            ...traces,
+                            ...(averageValue != null ? [averageLineTrace] : []),
+                            ...(averageErrorUpperTrace ? [averageErrorUpperTrace] : []),
+                            ...(averageErrorLowerTrace ? [averageErrorLowerTrace] : []),
+                        ] as Partial<Plotly.Data>[]}
                         layout={layout}
                         config={{ responsive: true, displayModeBar: true }}
                         useResizeHandler={true}

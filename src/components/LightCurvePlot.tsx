@@ -10,7 +10,7 @@ import { xKeyMap } from '@/utils/xKeyMap';
 import { createAnnotation, ModalInfo } from '@/utils/annotationUtils';
 import { RenderTooltip } from '@/constants/hoverUtils';
 import { digitize, weightedAvg } from '@/libs/mathUtils';
-import { PlotTrace, PlotLayout } from '@/types/PlotTypes';
+import { PlotTrace, PlotLayout, AveragePointCustomData } from '@/types/PlotTypes';
 import { ImageModal } from '@/components/ImageModal';
 import RawDataPlotPanel from '@/components/RawDataPlotPanel';
 import { Trash2 } from 'lucide-react';
@@ -32,6 +32,11 @@ export default function LightCurvePlot() {
   const [tooltipPosition, setTooltipPosition] = useState<{ left: number; top: number } | null>(null);
   const [rawPlot, setRawPlot] = useState<{ x: number; y: number; err?: number; customdata: unknown }[] | null>(null);
   const [rawColor, setRawColor] = useState<string>('#1f77b4');
+  const [rawAverageValue, setRawAverageValue] = useState<number | undefined>(undefined);
+  const [rawAverageError, setRawAverageError] = useState<number | undefined>(undefined);
+  const [posX, setPosX] = useState<number | undefined>(undefined);
+  const [posY, setPosY] = useState<number | undefined>(undefined);
+
 
   // const [selectedImages, setSelectedImages] = useState<
   //   { id: string; imgSrc: string; label: string; cd: any }[]
@@ -42,7 +47,7 @@ export default function LightCurvePlot() {
     imgThumbnailsSrc: string;
     imgSrc: string;
     label: string;
-    cd: any;
+    cd: Record<string, unknown>;
     bgColor: string;
     fontColor: string;
   };
@@ -78,7 +83,7 @@ export default function LightCurvePlot() {
           const timeKey = xKeyMap[xAxis];
           const addTrace = (
             wave: 'SW' | 'LW',
-            json: any,
+            json: Record<string, unknown>,
             target: PlotTrace[],
             color: string,
             epoch: string,
@@ -90,15 +95,17 @@ export default function LightCurvePlot() {
             const type = wave.toLowerCase()
             if (dataType === 'average') {
               if (xAxis === 'phase') {
-                const flux = json.psf_flux_phase ?? [], fluxErr = json.psf_flux_unc_phase ?? [];
-                const phaseValues = json.phase_values_phase ?? [];
-                const original_customdata = json.customdata_phase ?? [];
+                const flux: number[] = Array.isArray(json.psf_flux_phase) ? json.psf_flux_phase : [];
+                const fluxErr: number[] = Array.isArray(json.psf_flux_unc_phase) ? json.psf_flux_unc_phase : [];
+                const phaseValuesRaw: number[] = Array.isArray(json.phase_values_phase) ? json.phase_values_phase : [];
+                const phaseValues: number[] = Array.isArray(phaseValuesRaw) ? phaseValuesRaw : [];
+                const original_customdata: unknown[] = Array.isArray(json.customdata_phase) ? json.customdata_phase : [];
                 const binEdges = Array.from({ length: noOfBins + 1 }, (_, i) => i / noOfBins);
                 const binCenters = Array.from({ length: noOfBins }, (_, i) => (binEdges[i] + binEdges[i + 1]) / 2);
-                const bins: number[][] = Array.from({ length: noOfBins }, () => []);
-                const binErrs: number[][] = Array.from({ length: noOfBins }, () => []);
-                const binPhases: number[][] = Array.from({ length: noOfBins }, () => []);
-                const binCustomdata: number[][] = Array.from({ length: noOfBins }, () => []);
+                const bins: number[][] = Array.from({ length: noOfBins }, () => [] as number[]);
+                const binErrs: number[][] = Array.from({ length: noOfBins }, () => [] as number[]);
+                const binPhases: number[][] = Array.from({ length: noOfBins }, () => [] as number[]);
+                const binCustomdata: unknown[][] = Array.from({ length: noOfBins }, () => [] as unknown[]);
 
                 const binIndices = digitize(phaseValues, binEdges, false).map(i => i - 1);
                 binIndices.forEach((binIndex, idx) => {
@@ -124,6 +131,7 @@ export default function LightCurvePlot() {
                       r_in,
                       r_out,
                       phase: center.toFixed(5),
+                      avgErr
                     });
                     const rawPoints = bins[i].map((yVal, j) => ({
                       x: binPhases[i][j],
@@ -143,10 +151,11 @@ export default function LightCurvePlot() {
                 customdata = customdata.concat(customdata);
 
               } else {
-                const flux = json.psf_flux_time ?? [], fluxErr = json.psf_flux_unc_time ?? [];
-                const timeArr = json[timeKey] ?? [];
+                const flux = Array.isArray(json.psf_flux_time) ? json.psf_flux_time : [];
+                const fluxErr = Array.isArray(json.psf_flux_unc_time) ? json.psf_flux_unc_time : [];
+                const timeArr = Array.isArray(json[timeKey]) ? json[timeKey] : [];
 
-                const original_customdata = json.customdata_time ?? [];
+                const original_customdata = Array.isArray(json.customdata_time) ? json.customdata_time : [];
 
                 const chunkSize = noOfDataPoint;
                 const chunks = Math.floor(flux.length / chunkSize);
@@ -168,6 +177,7 @@ export default function LightCurvePlot() {
                     r_in,
                     r_out,
                     phase: center.toFixed(5),
+                    avgErr
                   });
                   const rawPoints = fc.map((yVal, j) => ({
                     x: tc[j],
@@ -195,6 +205,7 @@ export default function LightCurvePlot() {
                     r_in,
                     r_out,
                     phase: center.toFixed(5),
+                    avgErr
                   });
                   const rawPoints = fc.map((yVal, j) => ({
                     x: tc[j],
@@ -208,10 +219,11 @@ export default function LightCurvePlot() {
                 }
               }
             } else {
-              x = json[xAxis === 'phase' ? 'phase_values_phase' : timeKey] ?? [];
-              y = xAxis === 'phase' ? json.psf_flux_phase ?? [] : json.psf_flux_time ?? [];
-              err = xAxis === 'phase' ? json.psf_flux_unc_phase ?? [] : json.psf_flux_unc_time ?? [];
-              customdata = xAxis === 'phase' ? json.customdata_phase ?? [] : json.customdata_time ?? [];
+              const rawX = json[xAxis === 'phase' ? 'phase_values_phase' : timeKey];
+              x = Array.isArray(rawX) ? rawX as number[] : [];
+              y = xAxis === 'phase' ? (Array.isArray(json.psf_flux_phase) ? json.psf_flux_phase : []) : (Array.isArray(json.psf_flux_time) ? json.psf_flux_time : []);
+              err = xAxis === 'phase' ? (Array.isArray(json.psf_flux_unc_phase) ? json.psf_flux_unc_phase : []) : (Array.isArray(json.psf_flux_unc_time) ? json.psf_flux_unc_time : []);
+              customdata = xAxis === 'phase' ? (Array.isArray(json.customdata_phase) ? json.customdata_phase : []) : (Array.isArray(json.customdata_time) ? json.customdata_time : []);
               if (xAxis === 'phase') {
                 x = x.concat(x.map(v => v + 1));
                 y = y.concat(y);
@@ -350,47 +362,91 @@ export default function LightCurvePlot() {
 
 
 
-  function handleAveragePointClick(figure, pt: Plotly.PlotDatum) {
-    const cd = pt.customdata ?? {};
+  // interface AveragePointCustomData {
+  //   type?: string;
+  //   epoch?: string;
+  //   r_in?: string;
+  //   r_out?: string;
+  //   phase?: string | number;
+  //   avgErr?: number;
+  //   [key: string]: unknown;
+  // }
+
+  interface Match {
+    x: number | string | Date;
+    y: number;
+    data: PlotTrace;
+    cd: AveragePointCustomData;
+  }
+
+  function handleAveragePointClick(
+    figure: { data: PlotTrace[] },
+    pt: Plotly.PlotDatum
+  ): void {
+    const cd: AveragePointCustomData = (pt.customdata as unknown as AveragePointCustomData) ?? {};
+    if (pt.bbox) {
+      const container = document.querySelector('.js-plotly-plot') as HTMLElement;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+
+      const pointX = rect.left + (pt.bbox.x0 + pt.bbox.x1) / 2;
+      const pointY = rect.top + (pt.bbox.y0 + pt.bbox.y1) / 2;
+
+      const modalWidth = 500;
+      const margin = 10;
+
+      const newX = pointX + modalWidth + margin < window.innerWidth
+        ? pointX + margin
+        : Math.max(margin, pointX - modalWidth - margin); // clamp left
+
+      const modalHeight = 300;
+      const newY = Math.min(pointY + margin, window.innerHeight - modalHeight - margin);
+
+
+      setPosX(newX);
+      setPosY(newY);
+    }
+
+
     console.log('Average point click:', pt, cd);
-    setRawColor(pt.fullData?.marker?.color ?? '#1f77b4');
-    const { type, epoch, r_in, r_out, phase } = cd;
+    setRawColor(String(pt.fullData?.marker?.color ?? '#1f77b4'));
+    const { type, epoch, r_in, r_out, phase, avgErr } = cd;
     if (!type || !epoch || !r_in || !r_out || !phase || !avgPointRawMap) return;
-    const matches: {
-      x: number | string | Date;
-      y: number;
-      data: PlotTrace;
-      cd: any;
-    }[] = [];
-
-    figure.data.forEach(trace => {
-      if (trace?.legendgroup != type) return;
+    const matches: Match[] = [];
+    const averageY = typeof pt.y === 'number' ? pt.y : undefined;
+    const averageErr = avgErr ?? undefined;
+    console.log('Average point click:', pt, cd, averageY, averageErr);
+    figure.data.forEach((trace: PlotTrace) => {
+      if ((trace as PlotTrace)?.legendgroup != type) return;
       if (!Array.isArray(trace.customdata)) return;
-      // if (trace.customdata.type.toLowerCase() !== type.toLowerCase()) return;
 
-      trace.customdata.forEach((trCd, idx) => {
-        if (trCd?.phase === phase) {
+      trace.customdata.forEach((trCd, idx: number) => {
+        const cd = trCd as AveragePointCustomData;
+        if (cd?.phase === phase) {
           matches.push({
-            x: (trace.x as any[])[idx],
-            y: (trace.y as any[])[idx],
+            x: (trace.x as number[])[idx],
+            y: (trace.y as number[])[idx],
             data: trace,
-            cd: trCd,
+            cd: cd,
           });
         }
       });
     });
 
     if (matches.length > 0) {
-      const first = matches[0];
-      const key = `${type}_${phase}`;            // stable key
-      const exist = selectedImages.some(p => p.key === key);
-      const label = exist ?                       // reuse old label if exists
-        selectedImages.find(p => p.key === key)!.label
+      const key = `${type}_${phase}`; // stable key
+      const exist = selectedImages.some((p) => p.key === key);
+      const label = exist
+        ? selectedImages.find((p) => p.key === key)!.label
         : `Phase ${phase}`;
-      const bgColor = pt.fullData?.marker?.color ?? '#1f77b4';
+      const rawColor = pt.fullData?.marker?.color;
+      const bgColor = typeof rawColor === 'string' ? rawColor : '#1f77b4';
       const fontColor = getContrastingFontColor(bgColor);
       setAvgAnnotations(
-        matches.map(m =>
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-expect-error
+        matches.map((m) =>
           createAnnotation(
             { x: m.x, y: m.y, data: m.data },
             {
@@ -406,47 +462,50 @@ export default function LightCurvePlot() {
           )
         )
       );
-
-
-
     }
-    const wave = pt.data.name.includes('SW') ? 'SW' : 'LW';
     const key = `${type}_${epoch}_${r_in}_${r_out}_${Number(phase).toFixed(5)}`;
     const rawPoints = avgPointRawMap[key];
 
     if (rawPoints) {
       setRawPlot(rawPoints);
+      setRawAverageValue(averageY);
+      setRawAverageError(averageErr);
       setUseRawMode(true);
     } else {
       console.warn(`[Average click] No raw points found for key: ${key}`);
     }
   }
 
-  function handleOriginalPointClick(figure, pt: Plotly.PlotDatum) {
+  interface OriginalPointMatch {
+    x: number | string | Date;
+    y: number;
+    data: PlotTrace;
+    cd: AveragePointCustomData;
+  }
+
+  function handleOriginalPointClick(
+    figure: { data: PlotTrace[] },
+    pt: Plotly.PlotDatum
+  ): void {
     if (!figure) return;
-    const cd = pt.customdata ?? {};
+    const cd: AveragePointCustomData = (pt.customdata as unknown as AveragePointCustomData) ?? {};
     const { phase, type } = cd;
     if (!phase || !type) return;
 
-    const matches: {
-      x: number | string | Date;
-      y: number;
-      data: PlotTrace;
-      cd: any;
-    }[] = [];
+    const matches: OriginalPointMatch[] = [];
 
-    figure.data.forEach(trace => {
-      if (trace?.legendgroup != type) return;
+    figure.data.forEach((trace: PlotTrace) => {
+      // if ((trace as PlotTrace)?.legendgroup != type) return;
       if (!Array.isArray(trace.customdata)) return;
-      // if (trace.customdata.type.toLowerCase() !== type.toLowerCase()) return;
 
-      trace.customdata.forEach((trCd, idx) => {
-        if (trCd?.phase === phase) {
+      trace.customdata.forEach((trCd, idx: number) => {
+        const cd = trCd as AveragePointCustomData;
+        if (cd?.phase === phase) {
           matches.push({
-            x: (trace.x as any[])[idx],
-            y: (trace.y as any[])[idx],
+            x: (trace.x as number[])[idx],
+            y: (trace.y as number[])[idx],
             data: trace,
-            cd: trCd,
+            cd: cd,
           });
         }
       });
@@ -460,9 +519,12 @@ export default function LightCurvePlot() {
         selectedImages.find(p => p.key === key)!.label
         : `No. ${imageCounter.current}`;
 
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-expect-error
       setAnnotations(prev => [
         ...prev
-          .filter(a => (a as any).custom_id !== key) // remove current key (if any)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .filter(a => (a as any).custom_id !== key)
           .map(a => ({
             ...a,
             bgcolor: NORMAL_BG,
@@ -522,76 +584,10 @@ export default function LightCurvePlot() {
 
     }
   }
-  // function findClickedAnnotation(x: number, y: number, threshold = 0.1) {
-  //   return annotations.find(ann => {
-  //     if (!('x' in ann) || !('y' in ann)) return false;
-  //     const dx = Math.abs(x - Number(ann.x));
-  //     const dy = Math.abs(y - Number(ann.y));
-  //     return Math.sqrt(dx * dx + dy * dy) < threshold;
-  //   });
-  // }
-  // useEffect(() => {
-  //   const container = document.querySelector('.js-plotly-plot');
-  //   if (!container) return;
-
-  //   const attachClickHandlers = () => {
-  //     const annotationGroups = container.querySelectorAll<SVGGElement>('.annotation');
-
-  //     annotationGroups.forEach((groupEl) => {
-  //       if ((groupEl as any)._listenerAttached) return; // prevent double binding
-
-  //       const textNode = groupEl.querySelector('.annotation-text-g');
-  //       if (!textNode) return;
-
-  //       // Add event listener to the group
-  //       groupEl.addEventListener('click', () => {
-  //         const text = textNode.textContent?.trim();
-  //         if (!text) return;
-
-  //         const match = selectedImages.find((img) => img.label === text);
-  //         if (match) {
-  //           console.log('✅ Clicked annotation:', text);
-  //           focusAnnotation(match.key); // focusAnnotation must be defined
-  //         }
-  //       });
-
-  //       (groupEl as any)._listenerAttached = true;
-  //     });
-  //   };
-
-  //   // Initial run
-  //   setTimeout(attachClickHandlers, 100); // wait for plot to render
-
-  //   // Observer watches for re-renders
-  //   const observer = new MutationObserver(() => {
-  //     setTimeout(attachClickHandlers, 50);
-  //   });
-
-  //   observer.observe(container, { childList: true, subtree: true });
-
-  //   return () => observer.disconnect();
-  // }, [selectedImages]);
-
 
   const handlePointClick = useCallback((e: Plotly.PlotMouseEvent) => {
     const pt = e.points[0];
     if (!figure) return;
-
-    // const clickedX = pt.x;
-    // const clickedY = pt.y;
-
-    // if (typeof clickedX !== 'number' || typeof clickedY !== 'number') {
-    //   return;
-    // }
-
-    // const matchedAnn = findClickedAnnotation(clickedX, clickedY);
-    // if (matchedAnn) {
-    //   console.log('Clicked annotation:', matchedAnn);
-    //   const key = (matchedAnn as any).custom_id;
-    //   if (key) {
-    //     focusAnnotation(key);
-    //   }
-    // }
 
     if (dataType === 'average') {
       handleAveragePointClick(figure, pt);
@@ -609,28 +605,8 @@ export default function LightCurvePlot() {
     // Reset selected images
     setSelectedImages([]);
   }
-  // function focusAnnotation(key: string) {
-  //   setAnnotations(prev =>
-  //     prev.map(a => ({
-  //       ...a,
-  //       bgcolor: (a as any).custom_id === key ? FOCUS_BG : NORMAL_BG,
-  //       font: {
-  //         ...(a.font ?? {}),
-  //         color: (a as any).custom_id === key ? FOCUS_FG : NORMAL_FG,
-  //         size: FONT_SIZE,
-  //         family: FONT_FAMILY,
-  //       },
-  //     }))
-  //   );
 
-  //   setSelectedImages(prev =>
-  //     prev.map(p =>
-  //       p.key === key
-  //         ? { ...p, bgColor: FOCUS_BG, fontColor: FOCUS_FG }
-  //         : { ...p, bgColor: NORMAL_BG, fontColor: NORMAL_FG }
-  //     )
-  //   );
-  // }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   function handleHover(e: any) {
     const pt = e.points[0];
     console.log('Hover data:', pt);
@@ -688,6 +664,7 @@ export default function LightCurvePlot() {
           {/* Image grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-4  p-4">
             {/* <div className="mt-6 grid grid-cols-1 sm:grid-cols-3 md:grid-cols-6 gap-4"> */}
+            {/* eslint-disable-next-line @typescript-eslint/no-unused-vars */}
             {selectedImages.map((img, index) => (
               <div
                 key={img.key}
@@ -696,6 +673,7 @@ export default function LightCurvePlot() {
                   // 1. Update annotations
                   setAnnotations(prev =>
                     prev.map(a => {
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       const isTarget = (a as any).custom_id === img.key;
                       return {
                         ...a,
@@ -719,6 +697,7 @@ export default function LightCurvePlot() {
                   const matches = figure.data.flatMap(trace => {
                     if (!Array.isArray(trace.customdata)) return [];
 
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     return trace.customdata.map((trCd: any, i: number) => {
                       if (trCd?.phase === img.cd?.phase) {
                         const key = `${trCd.epoch}_${trCd.r_in}_${trCd.r_out}`;
@@ -740,9 +719,9 @@ export default function LightCurvePlot() {
                     imgSrc: img.imgSrc,
                     details: {
                       label: img.label,
-                      phase: img.cd?.phase,
-                      mjd: img.cd?.mjd,
-                      filename: img.cd?.filename,
+                      phase: typeof img.cd?.phase === 'number' ? img.cd?.phase : (img.cd?.phase !== undefined ? Number(img.cd?.phase) : undefined),
+                      mjd: typeof img.cd?.mjd === 'number' ? img.cd?.mjd : (img.cd?.mjd !== undefined ? Number(img.cd?.mjd) : undefined),
+                      filename: img.cd?.filename as string | undefined,
                       rows: matches as { epoch: string; r_in: string; r_out: string; y: number; }[]
                     }
                   });
@@ -769,6 +748,7 @@ export default function LightCurvePlot() {
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedImages(prev => prev.filter(p => p.key !== img.key));
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     setAnnotations(prev => prev.filter(a => (a as any).custom_id !== img.key));
                   }}
                   className="absolute top-0 right-0 bg-orange-500 hover:bg-orange-600 text-white p-2 rounded-bl text-lg"
@@ -791,13 +771,22 @@ export default function LightCurvePlot() {
       />
       {rawPlot && (
         <RawDataPlotPanel
-          rawData={rawPlot}
+          rawData={rawPlot.map(({ x, y, err, customdata }) => ({
+            x,
+            y,
+            err,
+            customdata: customdata as AveragePointCustomData
+          }))}
+          averageValue={rawAverageValue}
+          averageError={rawAverageError}
           annotations={useRawMode ? annotations : []}
+          posX={posX}
+          posY={posY}
           onClose={() => {
             clearAll();
           }}
           color={rawColor}
-          onPointClick={(figure, pt) => handleOriginalPointClick(figure, pt)}
+          onPointClick={(figure, pt) => handleOriginalPointClick(figure as { data: PlotTrace[] }, pt)}
         />
       )}
       {tooltipContent && tooltipPosition && (
