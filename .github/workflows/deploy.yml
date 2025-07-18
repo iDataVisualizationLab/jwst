@@ -51,7 +51,8 @@ jobs:
         id: artifact
         with:
           script: |
-            if (context.repo.owner === 'iDataVisualizationLab') {
+
+            if (context.repo.owner === 'rinriko') {
               const res = await github.rest.actions.listArtifactsForRepo({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
