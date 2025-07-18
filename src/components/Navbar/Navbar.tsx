@@ -22,10 +22,9 @@ export default function Navbar() {
 
   const mainLinks = [
     { name: '2D Plot', href: '/', id: '2d-plot-link' },
-    { name: 'Matrix', href: '/matrix', id: 'matrix-link' },
-    { name: 'Signal-to-noise', href: '/noise', id: 'noise-link' },
+    { name: 'Matrix', href: '/matrix', id: 'matrix-link', disabled: true },
+    { name: 'Signal-to-noise', href: '/noise', id: 'noise-link', disabled: true },
   ]
-
   // const settingsLink = { name: 'Settings', href: '#', id: 'settings-link' }
 
   return (
@@ -56,9 +55,11 @@ export default function Navbar() {
           {mainLinks.map((item) => (
             <a
               key={item.id}
-              href={item.href}
+              href={item.disabled ? '#' : item.href}
+              onClick={item.disabled ? (e) => e.preventDefault() : undefined}
+              className={`text-sm/6 font-semibold ${item.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900'
+                }`}
               id={item.id}
-              className="text-sm/6 font-semibold text-gray-900"
             >
               {item.name}
             </a>
@@ -116,12 +117,14 @@ export default function Navbar() {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault()
+                      if (item.disabled) return
                       // eslint-disable-next-line @typescript-eslint/no-unused-expressions
                       item.id === 'settings-link'
                         ? handleSettingsClick()
                         : setMobileMenuOpen(false)
                     }}
-                    className="-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold text-gray-900 hover:bg-gray-50"
+                    className={`-mx-3 block rounded-lg px-3 py-2 text-base/7 font-semibold ${item.disabled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-900 hover:bg-gray-50'
+                      }`}
                   >
                     {item.name}
                   </a>
