@@ -103,7 +103,7 @@ jobs:
           echo "NEXT_PUBLIC_REPO_NAME=${{ github.event.repository.name }}" >> $GITHUB_ENV
 
       - name: Build Next.js site
-        run: npm run build:static
+        run: npm run build
 
       - name: Upload static site artifact
         uses: actions/upload-pages-artifact@v3
