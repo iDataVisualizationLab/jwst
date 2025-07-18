@@ -190,7 +190,7 @@ export default function LightCurvePlot() {
                   }
                 }
 
-                x = x.concat(x.map(v => v + 1));
+                x = x.concat(x.map(v => typeof v === 'number' ? v + 1 : v));
                 y = y.concat(y);
                 err = err.concat(err);
                 customdata = customdata.concat(customdata);
