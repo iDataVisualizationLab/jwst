@@ -116,6 +116,7 @@ export default function Navbar() {
                     href="#"
                     onClick={(e) => {
                       e.preventDefault()
+                      // eslint-disable-next-line @typescript-eslint/no-unused-expressions
                       item.id === 'settings-link'
                         ? handleSettingsClick()
                         : setMobileMenuOpen(false)

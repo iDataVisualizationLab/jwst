@@ -114,12 +114,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
               <Slider
               id="thumbnailsSize"
               label="Thumb Size"
-              min={50}
-              max={150}
+              min={150}
+              max={350}
               step={1}
               defaultValue={thumbnailsSize}
               onChange={(val: number) => setSettings({ thumbnailsSize: val })}
-              marksStep={20}
+              marksStep={50}
               compact
               />
             </div>

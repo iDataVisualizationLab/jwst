@@ -4,16 +4,16 @@ export function buildTraces({
   x, y, err, customdata, hoverinfo, hovertemplate,
   plotType, errorBars, name, wave, color, pointSize, lineWidth
 }: {
-  x: number[];
+  x: number[] | string[] | Date[];
   y: number[];
   err: number[];
   customdata: unknown[];
-  hoverinfo: string;
-  hovertemplate: string;
+  hoverinfo?: PlotTrace['hoverinfo'];
+  hovertemplate?: string;
   plotType: 'lines' | 'markers' | 'lines+markers';
   errorBars: 'bar' | 'hide' | 'separate';
   name: string;
-  wave: 'SW' | 'LW';
+  wave?: 'SW' | 'LW';
   color: string;
   pointSize: number;
   lineWidth: number;
@@ -24,13 +24,13 @@ export function buildTraces({
     mode: plotType,
     opacity: 0.8,
     name: `${name} (${y.length})`,
-    legendgroup: wave.toLowerCase(),
-    legendgrouptitle: { text: `${wave} Group` },
+    legendgroup: wave ? wave.toLowerCase() : undefined,
+    legendgrouptitle: wave ? { text: `${wave} Group` } : undefined,
     marker: { color, size: pointSize },
     line: { color, width: lineWidth },
     customdata,
-    hoverinfo,
-    hovertemplate,
+    hoverinfo: hoverinfo ?? 'skip',
+  hovertemplate: hovertemplate ?? undefined,
   };
 
   if (errorBars === 'bar') {

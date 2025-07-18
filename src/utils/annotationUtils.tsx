@@ -1,21 +1,24 @@
 import React from 'react';
 
-interface Trace {
-  xaxis: string;
-  yaxis: string;
-}
+import { PlotTrace } from '@/types/PlotTypes';
 
 interface AnnotationPoint {
-  x: number;
+  x: string | number | Date;
   y: number;
-  data: Trace;
+  data: PlotTrace;
 }
 
 export interface AnnotationDetails {
-  type: string;
-  phase: string | number;
-  [key: string]: any;
+  type?: string;
+  phase?: string | number;
+  [key: string]: unknown;
   text?: string;
+  font?: {
+    color?: string;
+    size?: number;
+    family?: string;
+  };
+  bgcolor?: string;
 }
 
 export function createAnnotation(pt: AnnotationPoint, cd: AnnotationDetails) {
@@ -80,6 +83,17 @@ export function getModalDetails(items: ModalDetails[]): React.ReactNode[] {
 
 export interface ModalInfo {
   imgSrc?: string;
-  summary?: string[]; // shared phase/type/mjd/time
-  details?: React.ReactNode[]; // array of per-trace strings or JSX
+  summary?: string[];
+  details?: {
+    label: string;
+    phase?: number;
+    mjd?: number;
+    filename?: string;
+    rows?: Array<{
+      epoch: string;
+      r_in: string;
+      r_out: string;
+      y: number;
+    }>;
+  };
 }
