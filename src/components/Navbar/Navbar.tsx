@@ -21,9 +21,9 @@ export default function Navbar() {
   }
 
   const mainLinks = [
-    { name: '2D Plot', href: '/', id: '2d-plot-link', disabled: false  },
-    { name: 'Matrix', href: '/matrix/', id: 'matrix-link', disabled: false  },
-    { name: 'Signal-to-noise', href: '/noise', id: 'noise-link', disabled: true },
+    { name: '2D Plot', href: `${process.env.BASE_PATH}/`, id: '2d-plot-link', disabled: false  },
+    { name: 'Matrix', href: `${process.env.BASE_PATH}/matrix/`, id: 'matrix-link', disabled: false  },
+    { name: 'Signal-to-noise', href: `${process.env.BASE_PATH}/noise`, id: 'noise-link', disabled: true },
   ]
   // const settingsLink = { name: 'Settings', href: '#', id: 'settings-link' }
 
