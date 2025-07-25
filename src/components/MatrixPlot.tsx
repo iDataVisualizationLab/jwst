@@ -98,47 +98,47 @@ const MatrixPlot = ({ matrixData, labelFontSize, title = "Matrix" }: MatrixPlotP
         ? rawValues
         : normalize(rawValues);
 
-//          // Step 1: Compute all pairwise avg scores only once
-  const pairwiseScores = new Map<string, number>();
+    //          // Step 1: Compute all pairwise avg scores only once
+    const pairwiseScores = new Map<string, number>();
 
-  for (let i = 0; i < dimensions.length; i++) {
-    for (let j = 0; j < dimensions.length; j++) {
-      if (i === j) continue;
-      const a = dimensions[i];
-      const b = dimensions[j];
-      const key = `${a}|${b}`;
+    for (let i = 0; i < dimensions.length; i++) {
+        for (let j = 0; j < dimensions.length; j++) {
+            if (i === j) continue;
+            const a = dimensions[i];
+            const b = dimensions[j];
+            const key = `${a}|${b}`;
 
-      const values = matrixData.map(row => {
-        const x = row[a];
-        const y = row[b];
-        return x != null && y != null ? colorFunction(x, y) : null;
-      }).filter(v => v !== null) as number[];
+            const values = matrixData.map(row => {
+                const x = row[a];
+                const y = row[b];
+                return x != null && y != null ? colorFunction(x, y) : null;
+            }).filter(v => v !== null) as number[];
 
-      const avg = values.length > 0
-        ? values.reduce((sum, v) => sum + v, 0) / values.length
-        : 0;
+            const avg = values.length > 0
+                ? values.reduce((sum, v) => sum + v, 0) / values.length
+                : 0;
 
-      pairwiseScores.set(key, avg);
+            pairwiseScores.set(key, avg);
+        }
     }
-  }
 
 
-const columnScores = dimensions.map(col => {
-  const avgScore = dimensions
-    .filter(other => other !== col)
-    .map(other => {
-      const key1 = `${col}|${other}`;
-      const key2 = `${other}|${col}`;
-      return pairwiseScores.get(key1) ?? pairwiseScores.get(key2) ?? 0;
-    })
-    .reduce((a, b) => a + b, 0) / (dimensions.length - 1);
+    const columnScores = dimensions.map(col => {
+        const avgScore = dimensions
+            .filter(other => other !== col)
+            .map(other => {
+                const key1 = `${col}|${other}`;
+                const key2 = `${other}|${col}`;
+                return pairwiseScores.get(key1) ?? pairwiseScores.get(key2) ?? 0;
+            })
+            .reduce((a, b) => a + b, 0) / (dimensions.length - 1);
 
-  return { col, avgScore };
-});
-  // Step 3: Sort columns by avgScore ascending
-  const sortedDimensions = columnScores
-    .sort((a, b) => b.avgScore - a.avgScore )
-    .map(d => d.col);
+        return { col, avgScore };
+    });
+    // Step 3: Sort columns by avgScore ascending
+    const sortedDimensions = columnScores
+        .sort((a, b) => b.avgScore - a.avgScore)
+        .map(d => d.col);
 
     const annotations: Partial<Plotly.Annotations>[] = [];
 
@@ -159,18 +159,10 @@ const columnScores = dimensions.map(col => {
 
             annotations.push({
                 text: `avg: ${avg.toFixed(2)}`,
-                xref: (i === 0 ? "x" : `x${i + 1}`) as
-                    | "x" | "paper"
-                    | "x2" | "x3" | "x4" | "x5" | "x6" | "x7" | "x8" | "x9" | "x10"
-                    | "x11" | "x12" | "x13" | "x14" | "x15" | "x16" | "x17" | "x18" | "x19" | "x20"
-                    | "x21" | "x22" | "x23" | "x24" | "x25" | "x26" | "x27" | "x28" | "x29" | "x30"
-                    | undefined,
-                yref: (j === 0 ? "y" : `y${j + 1}`) as
-                    | "y" | "paper"
-                    | "y2" | "y3" | "y4" | "y5" | "y6" | "y7" | "y8" | "y9" | "y10"
-                    | "y11" | "y12" | "y13" | "y14" | "y15" | "y16" | "y17" | "y18" | "y19" | "y20"
-                    | "y21" | "y22" | "y23" | "y24" | "y25" | "y26" | "y27" | "y28" | "y29" | "y30"
-                    | undefined,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                xref: `x${i + 1} domain` as any,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                yref: `y${j + 1} domain` as any,
                 x: 0.2,
                 y: 0.8,
                 showarrow: false,
