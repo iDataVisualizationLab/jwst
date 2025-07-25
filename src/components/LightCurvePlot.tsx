@@ -848,17 +848,6 @@ export default function LightCurvePlot() {
                       rows: matches as { epoch: string; r_in: string; r_out: string; y: number; color: string | undefined }[]
                     }
                   });
-                  // setModalInfo({
-                  //   imgSrc: img.imgSrc,
-                  //   details: [
-                  //     `Label: ${img.label}`,
-                  //     `phase: ${img.cd?.phase}`,
-                  //     `type: ${img.cd?.type}`,
-                  //     `mjd: ${img.cd?.mjd}`,
-                  //     `r_in: ${img.cd?.r_in}`,
-                  //     `r_out: ${img.cd?.r_out}`,
-                  //   ],
-                  // });
                 }}
               >
                 <span

@@ -34,6 +34,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/react-plotly.js": "^2.6.3",
+    "@types/react-query": "^1.2.8",
     "@types/react-router-dom": "^5.3.3",
     "@types/react-select": "^5.0.0",
     "eslint": "^9",

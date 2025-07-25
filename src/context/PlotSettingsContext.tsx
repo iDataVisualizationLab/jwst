@@ -26,7 +26,12 @@ type PlotSettings = {
   focusedAnnotationIndex: number;
   annotationIndex: number;
 
-  avgPointRawMap: Record<string, { x: number; y: number; err: number; customdata: unknown;}[]>;
+  avgPointRawMap: Record<string, { x: number; y: number; err: number; customdata: unknown; }[]>;
+
+
+
+  colorBy: string;
+  focusRangeMax: number;
 
   setSettings: (updates: Partial<PlotSettings>) => void;
 };
@@ -56,6 +61,9 @@ const defaultValue: PlotSettings = {
   annotationIndex: 0,
 
   avgPointRawMap: {},
+
+  colorBy: 'diff',
+  focusRangeMax: 100,
 
   setSettings: () => { },
 };

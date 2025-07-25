@@ -21,8 +21,8 @@ export default function Navbar() {
   }
 
   const mainLinks = [
-    { name: '2D Plot', href: '/', id: '2d-plot-link' },
-    { name: 'Matrix', href: '/matrix', id: 'matrix-link', disabled: true },
+    { name: '2D Plot', href: '/', id: '2d-plot-link', disabled: false  },
+    { name: 'Matrix', href: '/matrix/', id: 'matrix-link', disabled: false  },
     { name: 'Signal-to-noise', href: '/noise', id: 'noise-link', disabled: true },
   ]
   // const settingsLink = { name: 'Settings', href: '#', id: 'settings-link' }
@@ -111,7 +111,7 @@ export default function Navbar() {
           <div className="mt-6 flow-root">
             <div className="-my-6 divide-y divide-gray-500/10">
               <div className="space-y-2 py-6">
-                {[...mainLinks, { name: 'Settings', href: '#', id: 'settings-link' }].map((item) => (
+                {[...mainLinks, { name: 'Settings', href: '#', id: 'settings-link', disabled: false }].map((item) => (
                   <a
                     key={item.id}
                     href="#"

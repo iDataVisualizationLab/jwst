@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             <Navbar />
             <div className="flex flex-1 overflow-hidden">
               <Sidebar />
-              <main className="flex-1 h-[calc(100vh-52px)] overflow-auto">
+              <main className="flex-1 h-[calc(100vh-52px)] overflow-auto bg-gray-50 ">
                 {children}
               </main>
             </div>
