@@ -135,28 +135,29 @@ const MatrixPlot = ({ matrixData, labelFontSize, title = "Matrix" }: MatrixPlotP
 
         return { col, avgScore };
     });
-    // Step 3: Sort columns by avgScore ascending
+    // Step 3: Sort columns by avgScore descending
     const sortedDimensions = columnScores
         .sort((a, b) => b.avgScore - a.avgScore)
+        // .sort((a, b) => a.avgScore - b.avgScore)
         .map(d => d.col);
 
     const annotations: Partial<Plotly.Annotations>[] = [];
 
-    for (let i = 0; i < dimensions.length; i++) {
-        for (let j = i + 1; j < dimensions.length; j++) {
-            const xKey = dimensions[i];
-            const yKey = dimensions[j];
+    for (let i = 0; i < sortedDimensions.length; i++) {
+        for (let j = i + 1; j < sortedDimensions.length; j++) {
+            const xKey = sortedDimensions[i];
+            const yKey = sortedDimensions[j];
 
-            const pairValues = matrixData.map(row => {
-                const x = row[xKey];
-                const y = row[yKey];
-                return x != null && y != null ? colorFunction(x, y) : null;
-            }).filter(v => v !== null) as number[];
+            // const pairValues = matrixData.map(row => {
+            //     const x = row[xKey];
+            //     const y = row[yKey];
+            //     return x != null && y != null ? colorFunction(x, y) : null;
+            // }).filter(v => v !== null) as number[];
 
-            const avg = pairValues.length > 0
-                ? pairValues.reduce((sum, v) => sum + v, 0) / pairValues.length
-                : 0;
-
+            // const avg = pairValues.length > 0
+            //     ? pairValues.reduce((sum, v) => sum + v, 0) / pairValues.length
+            //     : 0;
+            const avg = pairwiseScores.get(`${xKey}|${yKey}`) ?? 0;
             annotations.push({
                 text: `avg: ${avg.toFixed(2)}`,
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
