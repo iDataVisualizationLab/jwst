@@ -98,7 +98,7 @@ const MatrixPlot = ({ matrixData, labelFontSize, title = "Matrix" }: MatrixPlotP
         ? rawValues
         : normalize(rawValues);
 
-    //          // Step 1: Compute all pairwise avg scores only once
+    // Compute all pairwise avg scores only once
     const pairwiseScores = new Map<string, number>();
 
     for (let i = 0; i < dimensions.length; i++) {
@@ -135,7 +135,7 @@ const MatrixPlot = ({ matrixData, labelFontSize, title = "Matrix" }: MatrixPlotP
 
         return { col, avgScore };
     });
-    // Step 3: Sort columns by avgScore descending
+    // Sort columns by avgScore descending
     const sortedDimensions = columnScores
         .sort((a, b) => b.avgScore - a.avgScore)
         // .sort((a, b) => a.avgScore - b.avgScore)
