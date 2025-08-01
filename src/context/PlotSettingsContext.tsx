@@ -32,7 +32,7 @@ type PlotSettings = {
 
   colorBy: string;
   focusRangeMax: number;
-
+  focusRangeMaxManuallySet: boolean;
   setSettings: (updates: Partial<PlotSettings>) => void;
 };
 
@@ -64,6 +64,7 @@ const defaultValue: PlotSettings = {
 
   colorBy: 'diff',
   focusRangeMax: 100,
+  focusRangeMaxManuallySet: false,
 
   setSettings: () => { },
 };

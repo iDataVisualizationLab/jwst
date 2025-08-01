@@ -19,6 +19,12 @@ const visibilityByPath: Record<string, Partial<Record<string, boolean>>> = {
     averageConfig: true,
     matrixSection: true,
   },
+  '/matrix_plotly/': {
+    dataType: true,
+    dataSelection: true,
+    averageConfig: true,
+    matrixSection: true,
+  },
   '/lite': {
     dataType: true,
     xAxis: true,
@@ -160,52 +166,53 @@ export default function Sidebar() {
 
           {visibility.averageConfig && dataType !== 'raw' && (
             <Section title="Average Configuration">
-              {/* <div className="space-y-1 mb-4"> */}
-
-              {/* <p className="font-semibold mb-2">Average Configuration</p> */}
-
               {xAxis === 'phase' && pathname !== '/matrix/' ? (
                 <div className="space-y-2 mb-4">
-                  <label className="font-medium text-sm text-gray-700">Number of Bins: {noOfBins}</label>
+                  <label className="font-medium text-sm text-gray-700">
+                    Number of Bins: {noOfBins}
+                  </label>
                   <input
                     type="range"
                     min={5}
                     max={1000}
-                    value={noOfBins}
-                    onChange={(e) => setSettings({ noOfBins: Number(e.target.value) })}
+                    defaultValue={noOfBins}
                     className="w-full"
+                    onMouseUp={(e) => setSettings({ noOfBins: Number(e.currentTarget.value) })}
+                    onTouchEnd={(e) => setSettings({ noOfBins: Number(e.currentTarget.value) })}
                   />
                   <input
                     type="number"
                     min={5}
                     max={1000}
-                    value={noOfBins}
-                    onChange={(e) => setSettings({ noOfBins: Number(e.target.value) })}
+                    defaultValue={noOfBins}
+                    onBlur={(e) => setSettings({ noOfBins: Number(e.target.value) })}
                     className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                   />
                 </div>
               ) : (
                 <div className="space-y-2 mb-4">
-                  <label className="font-medium text-sm text-gray-700">Rebinning Factor: {noOfDataPoint}</label>
+                  <label className="font-medium text-sm text-gray-700">
+                    Rebinning Factor: {noOfDataPoint}
+                  </label>
                   <input
                     type="range"
                     min={1}
                     max={1000}
-                    value={noOfDataPoint}
-                    onChange={(e) => setSettings({ noOfDataPoint: Number(e.target.value) })}
+                    defaultValue={noOfDataPoint}
                     className="w-full"
+                    onMouseUp={(e) => setSettings({ noOfDataPoint: Number(e.currentTarget.value) })}
+                    onTouchEnd={(e) => setSettings({ noOfDataPoint: Number(e.currentTarget.value) })}
                   />
                   <input
                     type="number"
                     min={1}
                     max={1000}
-                    value={noOfDataPoint}
-                    onChange={(e) => setSettings({ noOfDataPoint: Number(e.target.value) })}
+                    defaultValue={noOfDataPoint}
+                    onBlur={(e) => setSettings({ noOfDataPoint: Number(e.target.value) })}
                     className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                   />
                 </div>
               )}
-              {/* </div> */}
             </Section>
           )}
 
@@ -239,25 +246,34 @@ export default function Sidebar() {
               {colorBy === 'diff' && (
                 <div className="space-y-1 mb-4">
                   <label className="font-medium text-sm text-gray-700">Focus Range Max (0–100%)</label>
+
                   <input
                     type="range"
-                    min={0}
+                    min={0.1}
                     max={100}
-                    value={focusRangeMax}
-                    onChange={(e) => setSettings({ focusRangeMax: Number(e.target.value) })}
+                    step={0.1}
+                    defaultValue={focusRangeMax}
+                    onMouseUp={(e) => setSettings({ focusRangeMax: Number(e.currentTarget.value), focusRangeMaxManuallySet: true })}
+                    onTouchEnd={(e) => setSettings({ focusRangeMax: Number(e.currentTarget.value), focusRangeMaxManuallySet: true })}
                     className="w-full"
                   />
+
                   <input
                     type="number"
-                    min={0}
+                    min={0.1}
                     max={100}
-                    value={focusRangeMax}
-                    onChange={(e) => setSettings({ focusRangeMax: Number(e.target.value) })}
+                    step={0.1}
+                    defaultValue={focusRangeMax}
+                    onBlur={(e) => setSettings({ focusRangeMax: Number(e.target.value), focusRangeMaxManuallySet: true })}
                     className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                   />
-                  <p className="text-xs text-gray-500">Highlighting points from 0% to {focusRangeMax}%</p>
+
+                  <p className="text-xs text-gray-500">
+                    Highlighting points from 0% to {focusRangeMax}%
+                  </p>
                 </div>
               )}
+
               {/* </div> */}
 
             </Section>
