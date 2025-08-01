@@ -185,7 +185,7 @@ const MatrixPlot = ({ matrixData, labelFontSize, title = "Matrix", subtitle = ""
 
         return { col, avgScore };
     });
-    // Step 3: Sort columns by avgScore descending
+    // Sort columns by avgScore descending
     const sortedDimensions = columnScores
         .sort((a, b) => b.avgScore - a.avgScore)
         // .sort((a, b) => a.avgScore - b.avgScore)
