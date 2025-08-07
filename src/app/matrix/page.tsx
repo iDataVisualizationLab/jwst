@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from "react";
+import MatrixPlot from "@/components/MatrixPlot";
 import { usePlotSettings } from '@/context/PlotSettingsContext';
 import { update_df, getEpoch } from '@/utils/matrixUtils';
-import D3MatrixPlot from '@/components/D3MatrixPlot';
 
 const MatrixPage = () => {
     const {
@@ -22,7 +22,16 @@ const MatrixPage = () => {
     const [lwMatrix, setLwMatrix] = useState<any[] | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(false);
+const baseHeight = 600;
+const extraPerDimension = 120; // adjust as needed
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const calcPlotHeight = (matrixData: any[]) => {
+  const dimCount = matrixData.length > 0 ? Object.keys(matrixData[0]).length : 2;
+  return dataSelection.length > 5
+    ? baseHeight + (dimCount - 2) * extraPerDimension
+    : baseHeight;
+};
     useEffect(() => {
         if (!isValid) return;
         setLoading(true);
@@ -55,22 +64,24 @@ const MatrixPage = () => {
                 <p className="text-red-500">Failed to load matrix data.</p>
             ) : (
                 <div className={`grid gap-6 ${dataSelection.length > 5 ? 'grid-rows-2 grid-cols-1' : 'grid-cols-1 lg:grid-cols-2'}`}>
-                    {/* <MatrixPlot */}
-                    <D3MatrixPlot
+                    <MatrixPlot
+                    // <D3MatrixPlot
                         matrixData={swMatrix}
                         labelFontSize={labelFontSize}
                         title="SW Scatter Matrix"
-                        // subtitle={`Source Brightness measured with BG annulus at each frame (e.g., SW.<i>r<sub>in</sub></i>.<i>r<sub>out</sub></i> → SW.10.30)`}
-                        subtitle="sw"
+                        subtitle={`Source Brightness measured with BG annulus at each frame (e.g., SW.<i>r<sub>in</sub></i>.<i>r<sub>out</sub></i> → SW.10.30)`}
+                        // subtitle="sw"
+                        height={calcPlotHeight(swMatrix)}
                     />
 
-                    {/* <MatrixPlot */}
-                    <D3MatrixPlot
+                    <MatrixPlot
+                    // <D3MatrixPlot
                         matrixData={lwMatrix}
                         labelFontSize={labelFontSize}
                         title="LW Scatter Matrix"
-                        // subtitle={`Source Brightness measured with BG annulus at each frame (e.g., LW.<i>r<sub>in</sub></i>.<i>r<sub>out</sub></i> → LW.10.30)`}
-                        subtitle="lw"
+                        subtitle={`Source Brightness measured with BG annulus at each frame (e.g., LW.<i>r<sub>in</sub></i>.<i>r<sub>out</sub></i> → LW.10.30)`}
+                        // subtitle="lw"
+                        height={calcPlotHeight(lwMatrix)}
                     />
                 </div>
             )}
